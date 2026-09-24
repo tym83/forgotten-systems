@@ -19,8 +19,16 @@
   main { display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:16px; padding:16px;
          align-items:start }
   @media (max-width:1100px) { main { grid-template-columns:1fr } }
-  canvas { width:100%; image-rendering:pixelated; border:1px solid var(--line);
-           background:#fff; display:block }
+  /* Экран закреплён, а колонка с заданиями мотается: иначе кнопка «Проверить»
+     уезжает вверх вместе с тем, что надо проверять глазами. */
+  .stage { position:sticky; top:12px; align-self:start }
+  canvas { image-rendering:pixelated; border:1px solid var(--line);
+           background:#fff; display:block; margin:0 auto;
+           width:auto; height:auto; max-width:100%;
+           max-height:calc(100vh - 92px); aspect-ratio:1024/768 }
+  /* На узком экране колонки схлопываются в одну, и закреплённый экран занял бы
+     её целиком — там он мотается вместе со всем. */
+  @media (max-width:1100px) { .stage { position:static } }
   .panel > section { border:1px solid var(--line); border-radius:8px; padding:12px;
                      margin-bottom:12px }
   .intro { color:var(--mut) }
@@ -41,7 +49,7 @@
               color:var(--acc); margin:0 0 6px }
   #payoff { font-size:13.5px; line-height:1.55 }
   #payoff ul { margin:6px 0 0 -18px }
-  pre.want { background:var(--code); padding:8px 10px; overflow-x:auto;
+  pre.want { background:color-mix(in srgb, var(--fg) 7%, transparent); padding:8px 10px; overflow-x:auto;
              font:11px/1.45 ui-monospace,Menlo,monospace; margin:8px 0 }
 </style>
 
@@ -55,7 +63,7 @@
 </header>
 
 <main>
-  <canvas id="cv" width="1024" height="768"></canvas>
+  <div class="stage"><canvas id="cv" width="1024" height="768"></canvas></div>
   <div class="panel">
     <section>
       <b id="title"></b> <span class="stat" id="level"></span>
