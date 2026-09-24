@@ -23,6 +23,7 @@
 #include "system/address-spaces.h"
 #include "system/system.h"
 #include "cpu.h"
+#include "oberon-io.h"
 
 /*
  * ПЗУ в железе — 512 слов: PROM.v берёт только adr[10:2]. Выборка кода
@@ -62,6 +63,12 @@ static void oberon_init(MachineState *machine)
      * собирает кусок кода, он кладётся по адресу сброса, и дальше можно
      * сравнивать состояние регистров команда за командой.
      */
+    /*
+     * Порты. Без счётчика миллисекунд система не доходит даже до экрана:
+     * на нём держится всё, что связано со временем.
+     */
+    oberon_io_init(g_new0(OberonIOState, 1), sys, OBERON_IO_BASE);
+
     if (machine->firmware) {
         ssize_t n = load_image_mr(machine->firmware, rom);
         if (n < 0) {

@@ -281,6 +281,14 @@ static bool trans_F2_mem(DisasContext *ctx, arg_F2_mem *r)
     int32_t off = sextract32(r->off, 0, 20);
 
     tcg_gen_addi_i32(addr, cpu_r[r->b], off);
+    /*
+     * ⚠ Адресная шина 24 бита: RISC5.v:7 объявляет adr как [23:0], а
+     * строка 144 берёт для обращения B[23:0] плюс смещение. Старшие восемь
+     * бит железо отбрасывает, и программы на это опираются — порты
+     * адресуются как 0xFFFFFFC0, то есть попросту -64. Без обрезки такой
+     * адрес уходит мимо всей карты памяти и чтение молча даёт ноль.
+     */
+    tcg_gen_andi_i32(addr, addr, 0x00FFFFFF);
 
     if (!r->u) {
         tcg_gen_qemu_ld_i32(cpu_r[r->a], addr, 0, r->v ? MO_UB : MO_TEUL);
