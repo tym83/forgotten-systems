@@ -17,7 +17,7 @@ spec:
       sharding.fluxcd.io/key: tenants
     chartRef:
       kind: ExternalArtifact
-      name: forgotten-systems-machines-default-oberon-lab
+      name: paleocomputing-machines-default-oberon-lab
       namespace: cozy-system
   dashboard:
     singular: Oberon Lab

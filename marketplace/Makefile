@@ -5,7 +5,7 @@
 # своя запись в метаиндексе.
 
 COZYPKG ?= /tmp/cozypkg
-REGISTRY ?= ghcr.io/REPLACE-ME
+REGISTRY ?= ghcr.io/tym83/paleocomputing
 TAG      ?= v0.1.0
 REPOS    := machines languages images
 
@@ -47,6 +47,6 @@ search:
 # тег и есть версия репозитория, им же он приколачивается при подключении.
 push:
 	@for r in $(REPOS); do \
-	  echo "── repos/$$r -> oci://$(REGISTRY)/forgotten-systems-$$r:$(TAG)"; \
-	  $(COZYPKG) push oci://$(REGISTRY)/forgotten-systems-$$r:$(TAG) --path repos/$$r || exit 1; \
+	  echo "── repos/$$r -> oci://$(REGISTRY)/$$r:$(TAG)"; \
+	  $(COZYPKG) push oci://$(REGISTRY)/$$r:$(TAG) --path repos/$$r || exit 1; \
 	done

@@ -17,7 +17,7 @@ spec:
       sharding.fluxcd.io/key: tenants
     chartRef:
       kind: ExternalArtifact
-      name: forgotten-systems-machines-default-handbook
+      name: paleocomputing-machines-default-handbook
       namespace: cozy-system
   dashboard:
     singular: Handbook

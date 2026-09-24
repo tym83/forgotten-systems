@@ -1,5 +1,5 @@
 apiVersion: v2
 name: machines-rd
-description: Catalog entries for the forgotten-systems machines repository
+description: Catalog entries for the paleocomputing machines repository
 type: application
 version: 0.1.0

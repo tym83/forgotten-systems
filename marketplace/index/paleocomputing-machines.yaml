@@ -2,12 +2,12 @@
 # разбор идёт строгим UnmarshalStrict), поэтому «тип записи» выражается
 # тегами — единственным полем, куда можно положить что-то своё. Поиск
 # cozypkg search ищет по имени, описанию и тегам.
-name: forgotten-systems-machines
-ociRef: oci://ghcr.io/REPLACE-ME/forgotten-systems-machines
+name: paleocomputing-machines
+ociRef: oci://ghcr.io/tym83/paleocomputing/machines
 version: v0.1.0
 description: Машины, которых нет в основном каталоге — эмуляторы, лабораторные и методички к ним
-homepage: https://github.com/REPLACE-ME/forgotten-systems
-maintainer: Forgotten Systems
+homepage: https://github.com/tym83/paleocomputing
+maintainer: tym83
 tags:
   - machine
   - emulator
@@ -15,5 +15,5 @@ tags:
   - retrocomputing
   - environment
 signing:
-  identity: REPLACE-ME
+  identity: https://github.com/tym83/paleocomputing/.github/workflows/publish.yml@refs/heads/main
   issuer: https://token.actions.githubusercontent.com

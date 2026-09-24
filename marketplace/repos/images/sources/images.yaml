@@ -15,11 +15,11 @@
 apiVersion: cozystack.io/v1alpha1
 kind: PackageSource
 metadata:
-  name: forgotten-systems.images
+  name: paleocomputing.images
 spec:
   sourceRef:
     kind: OCIRepository
-    name: forgotten-systems-images
+    name: paleocomputing-images
     namespace: cozy-system
     path: /
   variants:

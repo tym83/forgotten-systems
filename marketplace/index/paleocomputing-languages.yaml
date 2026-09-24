@@ -1,13 +1,13 @@
-name: forgotten-systems-languages
-ociRef: oci://ghcr.io/REPLACE-ME/forgotten-systems-languages
+name: paleocomputing-languages
+ociRef: oci://ghcr.io/tym83/paleocomputing/languages
 version: v0.1.0
 description: Окружения для языков — постоянная среда или разовый прогон без простаивающих подов
-homepage: https://github.com/REPLACE-ME/forgotten-systems
-maintainer: Forgotten Systems
+homepage: https://github.com/tym83/paleocomputing
+maintainer: tym83
 tags:
   - language
   - runtime
   - environment
 signing:
-  identity: REPLACE-ME
+  identity: https://github.com/tym83/paleocomputing/.github/workflows/publish.yml@refs/heads/main
   issuer: https://token.actions.githubusercontent.com

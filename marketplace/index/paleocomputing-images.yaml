@@ -1,13 +1,13 @@
-name: forgotten-systems-images
-ociRef: oci://ghcr.io/REPLACE-ME/forgotten-systems-images
+name: paleocomputing-images
+ociRef: oci://ghcr.io/tym83/paleocomputing/images
 version: v0.1.0
 description: Загрузочные образы машин для KubeVirt, включая образы с эмуляторами внутри
-homepage: https://github.com/REPLACE-ME/forgotten-systems
-maintainer: Forgotten Systems
+homepage: https://github.com/tym83/paleocomputing
+maintainer: tym83
 tags:
   - image
   - kubevirt
   - privileged
 signing:
-  identity: REPLACE-ME
+  identity: https://github.com/tym83/paleocomputing/.github/workflows/publish.yml@refs/heads/main
   issuer: https://token.actions.githubusercontent.com

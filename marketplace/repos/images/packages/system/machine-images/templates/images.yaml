@@ -25,7 +25,7 @@ metadata:
   namespace: cozy-public
   labels:
     app.kubernetes.io/managed-by: cozystack
-    forgotten-systems.io/source: marketplace
+    paleocomputing.io/source: marketplace
   annotations:
     vm-default-images.cozystack.io/name: {{ $full | quote }}
     {{- with .os }}
@@ -46,9 +46,9 @@ metadata:
     vm-default-images.cozystack.io/description: {{ . | quote }}
     {{- end }}
     {{- with .emulates }}
-    forgotten-systems.io/emulates: {{ .machine | quote }}
+    paleocomputing.io/emulates: {{ .machine | quote }}
     {{- with .note }}
-    forgotten-systems.io/emulates-note: {{ . | quote }}
+    paleocomputing.io/emulates-note: {{ . | quote }}
     {{- end }}
     {{- end }}
     cdi.kubevirt.io/storage.bind.immediate.requested: "true"

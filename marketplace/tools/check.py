@@ -79,7 +79,7 @@ def check_index() -> None:
            f"cozypkg читает индекс, записей: {len(entries)}")
 
     # Мутация: индекс разбирается строго, лишнее поле должно ломать разбор.
-    victim = ROOT / "index" / "forgotten-systems-images.yaml"
+    victim = ROOT / "index" / "paleocomputing-images.yaml"
     original = victim.read_text(encoding="utf-8")
     try:
         victim.write_text(original + "kind: Image\n", encoding="utf-8")
@@ -110,7 +110,7 @@ def check_validate() -> None:
     original = victim.read_text(encoding="utf-8")
     try:
         victim.write_text(
-            original.replace("forgotten-systems-machines-default-oberon-lab",
+            original.replace("paleocomputing-machines-default-oberon-lab",
                              "nonsense-does-not-exist"),
             encoding="utf-8")
         bad = run([COZYPKG, "validate", "repos/machines"])

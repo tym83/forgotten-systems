@@ -30,8 +30,8 @@ patch: []
 
 ## @param {Images} images - Container images.
 images:
-  web: ghcr.io/REPLACE-ME/oberon-web:dev
-  runner: ghcr.io/REPLACE-ME/oberon-lab:dev
+  web: ghcr.io/tym83/paleocomputing/oberon-web:dev
+  runner: ghcr.io/tym83/paleocomputing/oberon-lab:dev
 
 ## @typedef {struct} Resources - CPU and memory.
 ## @field {string} cpu

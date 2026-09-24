@@ -9,8 +9,8 @@
 компоненты репозитория, по ссылке на артефакт:
 
 ```
-forgotten-systems-machines-default-oberon-lab
-forgotten-systems-machines-default-handbook
+paleocomputing-machines-default-oberon-lab
+paleocomputing-machines-default-handbook
 ```
 
 Имя артефакта складывается как `<источник>-<вариант>-<компонент>` с заменой
@@ -36,4 +36,4 @@ forgotten-systems-machines-default-handbook
 | `machine` | `true` | машина с лабораторными |
 | `manual` | `true` | методичка рядом |
 | `host` / `manualHost` | `""` | внешние имена частей |
-| `artifactPrefix` | `forgotten-systems-machines-default` | начало имён артефактов |
+| `artifactPrefix` | `paleocomputing-machines-default` | начало имён артефактов |

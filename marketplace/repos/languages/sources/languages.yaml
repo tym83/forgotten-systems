@@ -8,11 +8,11 @@
 apiVersion: cozystack.io/v1alpha1
 kind: PackageSource
 metadata:
-  name: forgotten-systems.languages
+  name: paleocomputing.languages
 spec:
   sourceRef:
     kind: OCIRepository
-    name: forgotten-systems-languages
+    name: paleocomputing-languages
     namespace: cozy-system
     path: /
   variants:
