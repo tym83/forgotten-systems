@@ -1,0 +1,2 @@
+config RISC5
+    bool
