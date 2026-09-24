@@ -125,7 +125,7 @@ jobs:
         run: |
           set -euo pipefail
           git clone --filter=blob:none --no-checkout             https://github.com/cozystack/cozystack.git /tmp/cozystack
-          git -C /tmp/cozystack checkout --quiet ""
+          git -C /tmp/cozystack checkout --quiet "$COZYSTACK_SHA"
           ( cd /tmp/cozystack && go build -o /tmp/cozypkg ./cmd/cozypkg )
           sudo install -m755 /tmp/cozypkg /usr/local/bin/cozypkg
           cozypkg validate --help >/dev/null && echo "cozypkg собран, validate на месте"
