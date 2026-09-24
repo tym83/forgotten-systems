@@ -1,0 +1,23 @@
+84a85,93
+>   PROCEDURE PutCHK(r, lim: LONGINT);
+>   BEGIN (*emit hardware array bounds check: CHK r, lim*)
+>     (*F0 (p=0,q=0), v=1, op=1 (LSL alias); index in field b; limit in IR[15:4],
+>       12 bits unsigned; register c = MT so the hardware branch takes the Oberon
+>       trap vector directly. On failure acts exactly like BLR: R15 := return
+>       address, PC := R[MT]. Never writes a register, never touches flags.*)
+>     code[pc] := 10000000H + r*100000H + 10000H + lim*10H + MT; INC(pc)
+>   END PutCHK;
+> 
+282c291,292
+<         IF lim >= 0 THEN Put1a(Cmp, RH, y.r, lim)
+---
+>         IF (lim >= 0) & (lim < 1000H) THEN PutCHK(y.r, lim)  (*CONFIG C: hardware*)
+>         ELSIF lim >= 0 THEN Put1a(Cmp, RH, y.r, lim); Trap(10, 1)
+286,288c296,298
+<           END
+<         END ;
+<         Trap(10, 1)  (*BCC*)
+---
+>           END ;
+>           Trap(10, 1)
+>         END

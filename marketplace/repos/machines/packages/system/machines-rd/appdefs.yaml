@@ -1,0 +1,54 @@
+# Что этот репозиторий показывает в каталоге Cozystack.
+#
+# Схемы приложений сюда не переписываются: генератор берёт их прямо из
+# values.schema.json соответствующего чарта.
+packageSource: forgotten-systems.machines
+variant: default
+artifactNamespace: cozy-system
+
+apps:
+  - component: oberon-lab
+    chartPath: apps/oberon-lab
+    kind: OberonLab
+    plural: oberonlabs
+    singular: oberonlab
+    prefix: oberon-lab-
+    dashboard:
+      singular: Oberon Lab
+      plural: Oberon Labs
+      category: Forgotten Systems
+      description: Оберон на настоящем Verilog Вирта — девять лабораторных и методичка
+      icon: logos/oberon-lab.svg
+      tags: [education, emulation, retrocomputing, machine]
+      keysOrder: [["apiVersion"], ["kind"], ["metadata"], ["metadata", "name"], ["spec", "web"], ["spec", "replicas"], ["spec", "host"], ["spec", "runner"], ["spec", "task"], ["spec", "patch"]]
+
+  - component: handbook
+    chartPath: apps/handbook
+    kind: Handbook
+    plural: handbooks
+    singular: handbook
+    prefix: handbook-
+    dashboard:
+      singular: Handbook
+      plural: Handbooks
+      category: Forgotten Systems
+      description: Документация, которая разворачивается рядом с приложением
+      icon: logos/handbook.svg
+      tags: [documentation, education]
+      keysOrder: [["apiVersion"], ["kind"], ["metadata"], ["metadata", "name"], ["spec", "title"], ["spec", "pages"], ["spec", "image"], ["spec", "host"]]
+
+  - component: workbench
+    chartPath: apps/workbench
+    kind: Workbench
+    plural: workbenches
+    singular: workbench
+    prefix: workbench-
+    dashboard:
+      singular: Workbench
+      plural: Workbenches
+      category: Forgotten Systems
+      description: Готовое окружение — машина и её методичка ставятся одной вещью
+      icon: logos/workbench.svg
+      tags: [environment, meta, education]
+      weight: 10
+      keysOrder: [["apiVersion"], ["kind"], ["metadata"], ["metadata", "name"], ["spec", "machine"], ["spec", "manual"], ["spec", "host"], ["spec", "manualHost"]]

@@ -1,0 +1,5 @@
+apiVersion: v2
+name: languages-rd
+description: Catalog entries for the forgotten-systems languages repository
+type: application
+version: 0.1.0

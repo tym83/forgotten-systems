@@ -1,0 +1,7 @@
+read_verilog rtl/RISC5.v rtl/Registers.v rtl/Multiplier.v rtl/Divider.v \
+             rtl/FPAdder.v rtl/FPMultiplier.v rtl/FPDivider.v \
+             rtl/LeftShifter.v rtl/RightShifter.v
+hierarchy -check -top RISC5
+synth -top RISC5 -flatten
+opt_clean
+tee -o /tmp/stat_cmos.txt stat -tech cmos

@@ -1,0 +1,65 @@
+{{- if and (not .Values.machine) (not .Values.manual) }}
+{{- fail "workbench: окружение без единой части не имеет смысла — включите machine или manual" }}
+{{- end }}
+{{- if .Values.machine }}
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: {{ .Release.Name }}-machine
+  labels:
+    {{- include "workbench.labels" . | nindent 4 }}
+    sharding.fluxcd.io/key: tenants
+spec:
+  chartRef:
+    kind: ExternalArtifact
+    name: {{ include "workbench.artifact" (dict "root" $ "component" "oberon-lab") }}
+    namespace: {{ .Values.artifactNamespace | quote }}
+  interval: 5m
+  timeout: 15m
+  values:
+    web: true
+    runner: false
+    host: {{ .Values.host | quote }}
+    ingressClassName: {{ .Values.ingressClassName | quote }}
+{{- end }}
+{{- if .Values.manual }}
+{{- if .Values.machine }}
+---
+{{- end }}
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: {{ .Release.Name }}-manual
+  labels:
+    {{- include "workbench.labels" . | nindent 4 }}
+    sharding.fluxcd.io/key: tenants
+spec:
+  chartRef:
+    kind: ExternalArtifact
+    name: {{ include "workbench.artifact" (dict "root" $ "component" "handbook") }}
+    namespace: {{ .Values.artifactNamespace | quote }}
+  interval: 5m
+  timeout: 15m
+  {{- /* Методичка ставится вместе с машиной. Если у записи каталога нет
+         собственного образа с документацией, окружение всё равно поднимается:
+         в раздачу кладётся стартовая страница. */}}
+  values:
+    title: {{ .Values.manualSource.title | quote }}
+    image: {{ .Values.manualSource.image | quote }}
+    host: {{ .Values.manualHost | quote }}
+    ingressClassName: {{ .Values.ingressClassName | quote }}
+    {{- if not .Values.manualSource.image }}
+    pages:
+      - name: start
+        title: "С чего начать"
+        body: |
+          Это окружение подняло машину и методичку рядом.
+
+          Машина: девять браузерных лабораторных, процессор собран в WASM.
+          Открывается по адресу /lab.html на хосте машины.
+
+          Методичка: раздаётся здесь. Своего образа с документацией у записи
+          каталога не задано, поэтому показана эта стартовая страница —
+          подставьте образ в manualSource.image или свой список pages.
+    {{- end }}
+{{- end }}

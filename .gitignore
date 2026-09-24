@@ -1,0 +1,16 @@
+# Сборочные артефакты
+impl/build/
+__pycache__/
+*.pyc
+.DS_Store
+
+# ⚠ site/ намеренно НЕ игнорируется целиком: GitHub Pages раздаёт статику как
+# есть, поэтому собранные risc5.wasm, risc5.js и образ диска обязаны лежать в
+# репозитории. Пересобираются целью `make site` в impl/.
+
+# ⚠ Библиотека ячеек Nangate45 НЕ публикуется: её шапка прямо говорит
+# «provided pursuant to a License Agreement containing restrictions on its use»
+# и «does not indicate actual or intended publication of this file».
+# `make deps` корректно переживает её отсутствие, `make syn`/`fmax` без неё
+# не пойдут — это ожидаемо.
+impl/syn/lib/*.lib

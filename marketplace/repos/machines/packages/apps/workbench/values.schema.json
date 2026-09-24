@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "workbench",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "machine": { "type": "boolean" },
+    "manual":  { "type": "boolean" },
+    "host":       { "type": "string" },
+    "manualHost": { "type": "string" },
+    "ingressClassName": { "type": "string" },
+    "artifactPrefix":    { "type": "string", "minLength": 1 },
+    "artifactNamespace": { "type": "string", "minLength": 1 },
+    "manualSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "image"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "image": { "type": "string" }
+      }
+    }
+  }
+}

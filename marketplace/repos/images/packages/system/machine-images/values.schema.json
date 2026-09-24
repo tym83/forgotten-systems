@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "machine-images",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["namePrefix"],
+  "properties": {
+    "namePrefix":   { "type": "string", "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9-])?$", "minLength": 1 },
+    "storageClass": { "type": "string" },
+    "images": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "url"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$" },
+          "url":  { "type": "string", "pattern": "^https?://" },
+          "storage":      { "type": "string" },
+          "storageClass": { "type": "string" },
+          "architecture": { "type": "string" },
+          "description":  { "type": "string" },
+          "os": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "family":  { "type": "string" },
+              "name":    { "type": "string" },
+              "version": { "type": "string" }
+            }
+          },
+          "emulates": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["machine"],
+            "properties": {
+              "machine": { "type": "string", "minLength": 1 },
+              "note":    { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

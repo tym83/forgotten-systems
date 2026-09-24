@@ -1,0 +1,7 @@
+apiVersion: v2
+name: workbench
+description: A ready environment — the machine, its labs and its manual, installed as one thing
+icon: /logos/workbench.svg
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

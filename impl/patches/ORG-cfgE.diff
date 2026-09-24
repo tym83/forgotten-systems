@@ -1,0 +1,37 @@
+84a85,97
+>   PROCEDURE PutCHK(r, lim: LONGINT);
+>   BEGIN (*hardware array bounds check, 12-bit limit, diagnostics preserved*)
+>     (*F0 (p=0,q=0), v=1, op=1 (LSL alias). Index in field b. Limit split in two:
+>       high 4 bits into IR[27:24] (field a, unused by CHK), low 8 bits into
+>       IR[15:8]. Trap number 1 stays in IR[7:4] where Kernel.Trap expects it.
+>       Register c = MT. On failure acts like BLR: R15 := return address,
+>       PC := R[MT]. Never writes a register, never touches flags.
+>       Rationale: dynamic profiling showed 68% of executed checks on compute
+>       workloads hit arrays of 256..1023 elements, which an 8-bit limit misses.*)
+>     code[pc] := 10000000H + (lim DIV 100H)*1000000H + r*100000H + 10000H
+>               + (lim MOD 100H)*100H + 10H + MT; INC(pc)
+>   END PutCHK;
+> 
+282c295,296
+<         IF lim >= 0 THEN Put1a(Cmp, RH, y.r, lim)
+---
+>         IF (lim >= 0) & (lim < 1000H) THEN PutCHK(y.r, lim)  (*CONFIG E: hardware, split 12-bit limit*)
+>         ELSIF lim >= 0 THEN Put1a(Cmp, RH, y.r, lim); Trap(10, 1)
+286,288c300,302
+<           END
+<         END ;
+<         Trap(10, 1)  (*BCC*)
+---
+>           END ;
+>           Trap(10, 1)
+>         END
+1064c1078,1084
+<     F := Files.New(name); Files.Set(R, F, 0); Files.WriteString(R, modid); Files.WriteInt(R, key); Files.WriteByte(R, version);
+---
+>     F := Files.New(name); Files.Set(R, F, 0); Files.WriteString(R, modid); Files.WriteInt(R, key);
+>     (*CONFIG E: modules using the CHK instruction are stamped version 2 so that a stock
+>       loader refuses them (Modules.Mod: versionkey = 1X -> res = 4, bad file version).
+>       Without this a module with CHK loads on a stock core and the CHK word executes
+>       silently as LSL, corrupting the register named by the high nibble of the array
+>       limit -- R15 for limits >= 3840. See docs/FINDING-18-encoding-hazard.md*)
+>     IF version = 1 THEN Files.WriteByte(R, 2) ELSE Files.WriteByte(R, version) END ;

@@ -1,0 +1,7 @@
+at 12000000
+click 700 620 L
+type ORP.Compile ORP.Mod/s ~
+wait 1000000
+click 690 569 M
+wait 60000000
+shot build/orp_only.pbm

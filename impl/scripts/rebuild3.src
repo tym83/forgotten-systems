@@ -1,0 +1,37 @@
+# Сессия 3: модули, упавшие в ловушку 4 при сборке пачками (исчерпание кучи),
+# и последняя команда, не уместившаяся в бюджет сессии 2. По одному на команду.
+at 12000000
+click 700 620 L
+type ORP.Compile Checkers.Mod/s ~
+enter
+type ORP.Compile GraphicFrames.Mod/s ~
+enter
+type ORP.Compile Net.Mod/s ~
+enter
+type ORP.Compile Curves.Mod/s ~
+enter
+type ORP.Compile Draw.Mod/s ~
+wait 3000000
+click 690 569 M
+wait 30000000
+shot build/rb3_c00.pbm
+click 980 6 M
+wait 2000000
+click 690 581 M
+wait 30000000
+shot build/rb3_c01.pbm
+click 980 6 M
+wait 2000000
+click 690 593 M
+wait 40000000
+shot build/rb3_c02.pbm
+click 980 6 M
+wait 2000000
+click 690 605 M
+wait 30000000
+shot build/rb3_c03.pbm
+click 980 6 M
+wait 2000000
+click 690 617 M
+wait 40000000
+shot build/rb3_c04.pbm

@@ -1,0 +1,23 @@
+84a85,93
+>   PROCEDURE PutCHK(r, lim: LONGINT);
+>   BEGIN (*hardware array bounds check, diagnostics preserved*)
+>     (*F0 (p=0,q=0), v=1, op=1 (LSL alias); index in field b; limit in IR[15:8],
+>       8 bits unsigned; trap number 1 stays in IR[7:4] where Kernel.Trap expects
+>       it; register c = MT. On failure acts like BLR: R15 := return address,
+>       PC := R[MT]. Never writes a register, never touches flags.*)
+>     code[pc] := 10000000H + r*100000H + 10000H + lim*100H + 10H + MT; INC(pc)
+>   END PutCHK;
+> 
+282c291,292
+<         IF lim >= 0 THEN Put1a(Cmp, RH, y.r, lim)
+---
+>         IF (lim >= 0) & (lim < 100H) THEN PutCHK(y.r, lim)  (*CONFIG D: hardware, 8-bit limit*)
+>         ELSIF lim >= 0 THEN Put1a(Cmp, RH, y.r, lim); Trap(10, 1)
+286,288c296,298
+<           END
+<         END ;
+<         Trap(10, 1)  (*BCC*)
+---
+>           END ;
+>           Trap(10, 1)
+>         END

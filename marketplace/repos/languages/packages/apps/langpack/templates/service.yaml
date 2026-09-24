@@ -1,0 +1,54 @@
+{{- if eq .Values.mode "service" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels: {{- include "langpack.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels: {{- include "langpack.selector" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "langpack.labels" . | nindent 8 }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - {{- include "langpack.container" . | nindent 10 }}
+      volumes: {{- include "langpack.volumes" . | nindent 8 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}
+  labels: {{- include "langpack.labels" . | nindent 4 }}
+spec:
+  selector: {{- include "langpack.selector" . | nindent 4 }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+{{- if .Values.host }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}
+  labels: {{- include "langpack.labels" . | nindent 4 }}
+spec:
+  {{- with .Values.ingressClassName }}
+  ingressClassName: {{ . | quote }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}
+                port: { name: http }
+{{- end }}
+{{- end }}

@@ -1,0 +1,7 @@
+apiVersion: v2
+name: oberon-lab
+description: Oberon on real Verilog — interactive labs and a manual
+icon: /logos/oberon-lab.svg
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

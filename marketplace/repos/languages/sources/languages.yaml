@@ -1,0 +1,29 @@
+# Репозиторий «языки» — окружения для языков, у которых не было реализации,
+# и для тех, чья реализация давно недоступна.
+#
+# Замечание про «серверлесс»: в Cozystack нет подложки FaaS — ни Knative, ни
+# аналога, — поэтому масштабирования до нуля по запросу здесь взять неоткуда.
+# Практическое свойство «вхолостую ничего не крутится» даёт режим разового
+# задания (mode: job): окружение поднимается на время прогона и исчезает.
+apiVersion: cozystack.io/v1alpha1
+kind: PackageSource
+metadata:
+  name: forgotten-systems.languages
+spec:
+  sourceRef:
+    kind: OCIRepository
+    name: forgotten-systems-languages
+    namespace: cozy-system
+    path: /
+  variants:
+    - name: default
+      dependsOn:
+        - cozystack.cozystack-engine
+      components:
+        - name: langpack
+          path: apps/langpack
+        - name: languages-rd
+          path: system/languages-rd
+          install:
+            namespace: cozy-system
+            releaseName: forgotten-languages-rd

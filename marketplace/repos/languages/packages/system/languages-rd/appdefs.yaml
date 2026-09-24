@@ -1,0 +1,19 @@
+packageSource: forgotten-systems.languages
+variant: default
+artifactNamespace: cozy-system
+
+apps:
+  - component: langpack
+    chartPath: apps/langpack
+    kind: LangPack
+    plural: langpacks
+    singular: langpack
+    prefix: langpack-
+    dashboard:
+      singular: Language Pack
+      plural: Language Packs
+      category: Forgotten Systems
+      description: Окружение для языка — постоянная среда или разовый прогон
+      icon: logos/langpack.svg
+      tags: [language, environment, runtime]
+      keysOrder: [["apiVersion"], ["kind"], ["metadata"], ["metadata", "name"], ["spec", "language"], ["spec", "image"], ["spec", "mode"], ["spec", "program"], ["spec", "command"], ["spec", "args"], ["spec", "host"]]

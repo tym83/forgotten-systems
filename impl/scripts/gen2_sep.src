@@ -1,0 +1,35 @@
+# Два поколения: собрать компилятор компилятором с диска, выгрузить все четыре
+# модуля из памяти, затем собрать те же исходники уже свежесобранным компилятором.
+at 12000000
+click 700 620 L
+type ORP.Compile ORS.Mod/s ~
+enter
+type ORP.Compile ORB.Mod/s ~
+enter
+type ORP.Compile ORG.Mod/s ~
+enter
+type ORP.Compile ORP.Mod/s ~
+enter
+type System.Free ORP ORG ORB ORS ~
+wait 2000000
+click 690 569 M
+wait 80000000
+click 690 581 M
+wait 80000000
+click 690 593 M
+wait 90000000
+click 690 605 M
+wait 80000000
+shot build/g2_gen1.pbm
+click 685 617 M
+wait 10000000
+shot build/g2_freed.pbm
+click 690 569 M
+wait 80000000
+click 690 581 M
+wait 80000000
+click 690 593 M
+wait 90000000
+click 690 605 M
+wait 80000000
+shot build/g2_gen2.pbm

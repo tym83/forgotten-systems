@@ -1,0 +1,71 @@
+##
+## @section Язык и его окружение
+##
+
+## @param {string} language - Как язык называется. Идёт в заголовки и метки.
+language: ""
+
+## @param {string} image - Образ, в котором лежит реализация языка.
+image: ""
+
+## @param {string} mode=job - Как окружение работает.
+## `service` — постоянно поднятая среда с доступом по HTTP (REPL, тетрадь, IDE).
+## `job` — разовый прогон: окружение живёт только пока считает.
+## Масштабирования до нуля в кластере нет, поэтому «вхолостую не тратим» —
+## это именно `job`.
+## @x-cozystack-options {enum: [service, job]}
+mode: job
+
+##
+## @section Что запускать
+##
+
+## @param {[]string} command - Точка входа. Пусто — команда из образа.
+command: []
+
+## @param {[]string} args - Аргументы к ней.
+args: []
+
+## @typedef {struct} SourceFile - Один файл исходников.
+## @field {string} path - Имя файла внутри рабочего каталога.
+## @field {string} content - Текст файла.
+
+## @param {[]SourceFile} program - Исходники. Кладутся в srcdir только на
+## чтение. Имена плоские: каталогов внутри нет.
+program: []
+
+## @param {string} srcdir=/src - Куда монтируются исходники. Только чтение:
+## это ConfigMap. Копировать их себе — дело самого образа.
+srcdir: /src
+
+## @param {string} workdir=/work - Рабочий каталог. Пустой том на запись:
+## сюда язык складывает то, что произвёл.
+workdir: /work
+
+##
+## @section Ресурсы и доступ
+##
+
+## @param {int} replicas=1 - Реплик в режиме service.
+replicas: 1
+
+## @param {int} port=8080 - Порт, который слушает среда в режиме service.
+port: 8080
+
+## @param {string} [host] - Внешнее имя для режима service.
+host: ""
+
+## @param {string} [ingressClassName] - Класс ingress.
+ingressClassName: ""
+
+## @typedef {struct} Resources - Запрос ресурсов.
+## @field {string} cpu
+## @field {string} memory
+
+## @param {Resources} resources - Сколько давать окружению.
+resources:
+  cpu: "500m"
+  memory: "512Mi"
+
+## @param {int} backoffLimit=1 - Сколько раз повторять упавший разовый прогон.
+backoffLimit: 1

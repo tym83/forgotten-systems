@@ -1,0 +1,44 @@
+# Репозиторий «машины» — эмуляторы систем, которых нет в основном каталоге.
+#
+# Единица установки в модели маркетплейса — репозиторий целиком, а не отдельный
+# пакет: вещи внутри собраны и проверены вместе. Репозиторий — один OCI-артефакт
+# со своим тегом, тег и есть его версия.
+#
+# Вариант ровно один. Имя ссылки на чарт складывается как
+# <источник>-<вариант>-<компонент>, поэтому второй вариант увёл бы все ссылки в
+# ApplicationDefinition на несуществующие артефакты. У всех 100 источников самой
+# платформы вариант тоже ровно один.
+apiVersion: cozystack.io/v1alpha1
+kind: PackageSource
+metadata:
+  name: forgotten-systems.machines
+spec:
+  sourceRef:
+    kind: OCIRepository
+    name: forgotten-systems-machines
+    namespace: cozy-system
+    path: /
+  variants:
+    - name: default
+      dependsOn:
+        # Отсюда приезжает CRD для ApplicationDefinition, которую рендерит
+        # компонент machines-rd ниже.
+        - cozystack.cozystack-engine
+      components:
+        # Компонент без блока install публикуется артефактом и НЕ ставится
+        # релизом (internal/operator/package_reconciler.go: «Skip components
+        # without Install section»). Именно так и нужно приложениям: их
+        # разворачивает пользователь из каталога, а не подключение репозитория.
+        - name: oberon-lab
+          path: apps/oberon-lab
+        - name: handbook
+          path: apps/handbook
+        - name: workbench
+          path: apps/workbench
+
+        # А вот описания приложений для каталога ставятся один раз.
+        - name: machines-rd
+          path: system/machines-rd
+          install:
+            namespace: cozy-system
+            releaseName: forgotten-machines-rd

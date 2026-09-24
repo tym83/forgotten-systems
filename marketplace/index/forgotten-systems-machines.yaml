@@ -1,0 +1,19 @@
+# Запись метаиндекса. Набор полей задан жёстко (cmd/cozypkg/cmd/index.go,
+# разбор идёт строгим UnmarshalStrict), поэтому «тип записи» выражается
+# тегами — единственным полем, куда можно положить что-то своё. Поиск
+# cozypkg search ищет по имени, описанию и тегам.
+name: forgotten-systems-machines
+ociRef: oci://ghcr.io/REPLACE-ME/forgotten-systems-machines
+version: v0.1.0
+description: Машины, которых нет в основном каталоге — эмуляторы, лабораторные и методички к ним
+homepage: https://github.com/REPLACE-ME/forgotten-systems
+maintainer: Forgotten Systems
+tags:
+  - machine
+  - emulator
+  - education
+  - retrocomputing
+  - environment
+signing:
+  identity: REPLACE-ME
+  issuer: https://token.actions.githubusercontent.com

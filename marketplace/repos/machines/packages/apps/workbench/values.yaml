@@ -1,0 +1,45 @@
+##
+## @section Из чего собирается окружение
+##
+## Метаприложение: пользователь ставит одну вещь и получает среду из нескольких
+## частей. Части — те же самые компоненты репозитория, поэтому они не
+## дублируются: родительский релиз только заказывает их по ссылке на артефакт.
+
+## @param {bool} machine=true - Машина с лабораторными.
+machine: true
+
+## @param {bool} manual=true - Методичка рядом с машиной.
+manual: true
+
+## @param {string} [host] - Внешнее имя машины. Пусто — ingress не создаётся.
+host: ""
+
+## @param {string} [manualHost] - Внешнее имя методички.
+manualHost: ""
+
+## @param {string} [ingressClassName] - Класс ingress. Пусто — умолчание кластера.
+ingressClassName: ""
+
+##
+## @section Куда смотрят ссылки на чарты
+##
+## Имя артефакта складывается как <источник>-<вариант>-<компонент>, точки
+## заменяются дефисами (internal/marketplace/naming). Менять эти значения нужно
+## только если репозиторий переименован.
+
+## @param {string} artifactPrefix=forgotten-systems-machines-default - Общее
+## начало имён артефактов этого репозитория.
+artifactPrefix: forgotten-systems-machines-default
+
+## @param {string} artifactNamespace=cozy-system - Пространство имён, где лежат
+## артефакты подключённого репозитория.
+artifactNamespace: cozy-system
+
+## @typedef {struct} Manual - Что показывает методичка.
+## @field {string} title - Заголовок.
+## @field {string} image - Образ с готовой документацией; пусто — берутся pages.
+
+## @param {Manual} manualSource - Источник методички.
+manualSource:
+  title: "Оберон на настоящем Verilog"
+  image: ""

@@ -1,0 +1,9 @@
+read_verilog rtl/RISC5.v rtl/Registers.v rtl/Multiplier.v rtl/Divider.v \
+             rtl/FPAdder.v rtl/FPMultiplier.v rtl/FPDivider.v \
+             rtl/LeftShifter.v rtl/RightShifter.v
+hierarchy -check -top RISC5
+synth -top RISC5 -flatten
+dfflibmap -liberty LIBPATH
+abc -liberty LIBPATH -D PERIOD_PS
+opt_clean
+stat -liberty LIBPATH

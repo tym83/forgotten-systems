@@ -1,0 +1,21 @@
+# Поколение 1: каждый модуль — отдельной командой, чтобы между ними
+# управление вернулось в Oberon.Loop и отработал сборщик мусора.
+at 12000000
+click 700 620 L
+type ORP.Compile ORS.Mod/s ~
+enter
+type ORP.Compile ORB.Mod/s ~
+enter
+type ORP.Compile ORG.Mod/s ~
+enter
+type ORP.Compile ORP.Mod/s ~
+wait 2000000
+click 690 569 M
+wait 80000000
+click 690 581 M
+wait 80000000
+click 690 593 M
+wait 90000000
+click 690 605 M
+wait 80000000
+shot build/gen1_sep.pbm

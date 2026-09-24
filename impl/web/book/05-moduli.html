@@ -1,0 +1,143 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Модули, символьные файлы и ключи</title>
+<style>
+:root { color-scheme: light dark; --bg:#f6f6f4; --fg:#1a1a1a; --mut:#666;
+        --line:#d8d8d4; --acc:#2b5fa8; --code:#eceae5; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#16181c; --fg:#e6e6e6; --mut:#9aa0a6; --line:#2e3238;
+          --acc:#7aa7e8; --code:#20242a; } }
+* { box-sizing:border-box }
+body { margin:0; background:var(--bg); color:var(--fg);
+       font:16px/1.65 ui-serif,Georgia,"Times New Roman",serif; }
+.wrap { display:grid; grid-template-columns:240px minmax(0,72ch); gap:40px;
+        max-width:1100px; margin:0 auto; padding:28px 20px 80px }
+@media (max-width:900px) { .wrap { grid-template-columns:1fr; gap:16px } }
+nav { position:sticky; top:20px; align-self:start;
+      font:13px/1.5 ui-sans-serif,system-ui,sans-serif }
+nav a { display:block; padding:3px 0; color:var(--mut); text-decoration:none }
+nav a:hover { color:var(--acc) }
+nav a.cur { color:var(--fg); font-weight:600 }
+nav .top { font-weight:600; color:var(--fg); margin-bottom:10px; display:block }
+h1 { font-size:26px; line-height:1.25; margin:0 0 24px }
+h2 { font-size:20px; margin:32px 0 10px }
+h3 { font-size:17px; margin:24px 0 8px }
+p, li { margin:0 0 12px }
+ul, ol { padding-left:24px }
+a { color:var(--acc) }
+code { font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+       background:var(--code); padding:1px 4px; border-radius:3px }
+pre { background:var(--code); padding:12px 14px; border-radius:7px;
+      overflow-x:auto; border:1px solid var(--line) }
+pre code { background:none; padding:0; font-size:12.5px }
+table { border-collapse:collapse; width:100%; font-size:14px; margin:0 0 16px;
+        display:block; overflow-x:auto }
+th, td { border:1px solid var(--line); padding:6px 9px; text-align:left }
+th { background:var(--code) }
+blockquote { margin:0 0 14px; padding:8px 14px; border-left:3px solid var(--line);
+             color:var(--mut) }
+.foot { margin-top:48px; padding-top:16px; border-top:1px solid var(--line);
+        display:flex; justify-content:space-between;
+        font:14px ui-sans-serif,system-ui,sans-serif }
+</style>
+<div class="wrap">
+<nav><a class="top" href="index.html">Оберон: методичка</a><a class="" href="01-zachem.html">Зачем это и что здесь настоящее</a><a class="" href="02-mashina.html">Машина: RISC5</a><a class="" href="03-yazyk.html">Язык: Оберон за одну главу</a><a class="" href="04-sistema.html">Система: текст вместо кнопок</a><a class="cur" href="05-moduli.html">Модули, символьные файлы и ключи</a><a class="" href="06-kompilyator.html">Компилятор изнутри</a><a class="" href="07-samoraskrutka.html">Самораскрутка и неподвижная точка</a><a class="" href="08-izmereno.html">Что мы измерили и что нашли</a>
+<a href="../lab.html" style="margin-top:14px">→ Лаборатории</a></nav>
+<article><h1>Модули, символьные файлы и ключи</h1>
+<p>В Обероне нет заголовочных файлов. Интерфейс модуля компилятор извлекает из
+самого модуля и кладёт рядом — в <strong>символьный файл</strong> с расширением <code>.smb</code>.
+Механизм маленький, но именно он держит всю раздельную компиляцию, и без
+понимания ключей половина сообщений компилятора выглядит загадочно.</p>
+<h2>Что получается при компиляции</h2>
+<p>Из <code>Math.Mod</code> компилятор делает два файла:</p>
+<ul>
+<li><code>Math.rsc</code> — объектный код: команды, данные, строки, таблицы фиксапов,
+  список импортов и точки входа;</li>
+<li><code>Math.smb</code> — символьный файл: только экспортированные имена с их типами.</li>
+</ul>
+<p>Смотреть <code>.rsc</code> можно командой <code>ORTool.DecObj Math.rsc</code> — она печатает
+заголовок и дизассемблированный код.</p>
+<h2>Ключ</h2>
+<p>В заголовке каждого объектного и символьного файла лежит <strong>ключ</strong> — число,
+подсчитанное по содержимому интерфейса. В журнале он показывается последним:</p>
+<pre><code>compiling Math  447     0 32C32F12
+</code></pre>
+<p>Ключ меняется тогда и только тогда, когда меняется <strong>интерфейс</strong>: состав
+экспортированных имён, их типы, порядок. Изменение тела процедуры при том же
+заголовке ключ не трогает.</p>
+<p>Каждый модуль запоминает ключи всех, кого импортирует. При загрузке система
+сверяет их с настоящими. Не совпало — модуль не загрузится, и вы увидите
+жалобу на несоответствие.</p>
+<p>Это защита от самой неприятной ошибки раздельной компиляции: собрали модуль,
+поменяли интерфейс библиотеки, пересобрали только её — и получили программу,
+которая вызывает процедуру по старому смещению. В Обероне такое невозможно: она
+просто не запустится.</p>
+<h2>Ключ <code>/s</code></h2>
+<p>Отсюда и смысл ключа <code>/s</code> в команде компиляции. По умолчанию компилятор
+<strong>отказывается</strong> перезаписывать символьный файл, если интерфейс изменился, —
+потому что это молча сломает всех, кто уже собран.</p>
+<p><code>/s</code> говорит «да, я знаю, перезаписывай». После этого всех зависимых надо
+пересобрать. Порядок пересборки — от тех, кто ни от кого не зависит, к тем, кто
+зависит от всех.</p>
+<p>При пересборке неизменённого исходника интерфейс не меняется, ключ остаётся
+прежним, и <code>/s</code> безвреден. Именно поэтому в лабораторных он стоит везде.</p>
+<h2>Порядок сборки</h2>
+<p>Порядок задаётся импортами. Для этой системы он получается такой (начало):</p>
+<pre><code>Kernel  FileDir  Files  Modules  Input  Display  Viewers
+Fonts  Texts  Oberon  ...  ORS  ORB  ORG  ORP  ...
+</code></pre>
+<p>Его не надо помнить: он выводится из самих исходников топологической
+сортировкой по <code>IMPORT</code>. Мы так и делаем, когда пересобираем систему целиком.</p>
+<h2>Что показывает пересборка</h2>
+<p>Если исходники и компилятор согласованы, пересборка неизменённого модуля даёт
+<strong>побайтово тот же</strong> объектный файл. Это сильное свойство, и его стоит
+проверять: оно означает, что компилятор детерминирован и что поставляемые
+двоичные файлы соответствуют поставляемым исходникам.</p>
+<p>Мы пересобрали всю систему внутри неё самой. Тридцать семь объектных файлов
+из тридцати девяти собрались побайтово идентично. Два исключения оказались
+находками:</p>
+<ul>
+<li><strong><code>Math.rsc</code> на образе устарел.</strong> Поставляемый файл содержит 449 слов кода,
+  пересборка даёт 447 — при одинаковом ключе <code>32C32F12</code>. Интерфейс тот же,
+  а код порождён другой версией компилятора, чем лежит на том же диске.</li>
+<li><strong><code>PIO.rsc</code> и <code>PIO.smb</code> отсутствовали вовсе</strong> и появляются только после
+  пересборки.</li>
+</ul>
+<p>Первое вы воспроизведёте своими руками в лабораторной №7: посмотрите длину
+<code>Math.rsc</code> до и после.</p>
+<h2>Ещё три несогласованности</h2>
+<p>Заодно выяснилось, что три модуля с этого образа <strong>не компилируются
+компилятором с того же образа</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>модуль</th>
+<th>сообщение</th>
+<th>причина</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>RISC</code></td>
+<td><code>pos 926 bad divisor</code></td>
+<td>в тексте <code>IR DIV 80000000H</code>, а эта константа как знаковое целое отрицательна; делитель должен быть положительным</td>
+</tr>
+<tr>
+<td><code>ORC</code></td>
+<td><code>import not available</code></td>
+<td>импортирует модуль <code>V24</code>, которого на образе нет ни исходником, ни символьным файлом</td>
+</tr>
+<tr>
+<td><code>Net</code></td>
+<td>девять раз <code>incompatible parameters</code></td>
+<td>сигнатуры вызовов <code>SCC</code> разошлись с <code>SCC.Mod</code> этого же образа</td>
+</tr>
+</tbody>
+</table>
+<p>Это не поломка нашей машины и не ошибка сборки: диагностику выдаёт сам
+компилятор Оберона, а расхождение в <code>Math.rsc</code> видно побайтовым сравнением
+файлов.</p>
+<p>Вывод, который стоит унести: <strong>распространяемый образ системы не обязан быть
+согласованным сам с собой, и проверяется это только попыткой пересборки.</strong></p><div class="foot"><span><a href="04-sistema.html">← Система: текст вместо кнопок</a></span><span><a href="06-kompilyator.html">Компилятор изнутри →</a></span></div></article>
+</div>

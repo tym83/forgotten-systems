@@ -1,0 +1,38 @@
+##
+## @section Что раздаётся
+##
+
+## @param {string} title=Handbook - Заголовок на титульной странице.
+title: Handbook
+
+## @typedef {struct} Page - Одна страница методички.
+## @field {string} name - Имя файла без расширения, оно же адрес страницы.
+## @field {string} title - Заголовок в оглавлении.
+## @field {string} body - Текст страницы.
+
+## @param {[]Page} pages - Страницы, которые кладутся в раздачу как есть.
+## Нужны, когда у записи каталога нет собственного образа с документацией:
+## тогда методичка разворачивается на стоковом nginx и ничего собирать не надо.
+pages: []
+
+## @param {string} [image] - Образ, внутри которого уже лежит собранная
+## документация в /usr/share/nginx/html. Если задан, страницы из `pages`
+## игнорируются: образ считается источником истины.
+image: ""
+
+##
+## @section Как выставляется наружу
+##
+
+## @param {int} replicas=1 - Число реплик.
+replicas: 1
+
+## @param {string} [host] - Внешнее имя. Пусто — ingress не создаётся.
+host: ""
+
+## @param {string} [ingressClassName] - Класс ingress. Пусто — умолчание кластера.
+ingressClassName: ""
+
+## @param {string} baseImage=nginxinc/nginx-unprivileged:1.27-alpine - Образ
+## раздачи, когда собственного образа с документацией нет.
+baseImage: nginxinc/nginx-unprivileged:1.27-alpine

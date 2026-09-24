@@ -1,0 +1,7 @@
+apiVersion: v2
+name: handbook
+description: Documentation served next to the application it documents
+icon: /logos/handbook.svg
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

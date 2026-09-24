@@ -1,0 +1,4 @@
+at 12000000
+click 880 262 M          # System.Grow в заголовке System.Tool
+wait 4000000
+shot build/grown.pbm

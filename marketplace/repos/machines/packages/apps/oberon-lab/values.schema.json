@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "oberon-lab",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "web":      { "type": "boolean" },
+    "replicas": { "type": "integer", "minimum": 0 },
+    "host":     { "type": "string" },
+    "ingressClassName": { "type": "string" },
+    "runner":   { "type": "boolean" },
+    "task":     { "type": "string", "enum": ["isa", "compiler", "check"] },
+    "patch": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "content"],
+        "properties": {
+          "path":    { "type": "string", "pattern": "^[A-Za-z0-9_./-]+$" },
+          "content": { "type": "string" }
+        }
+      }
+    },
+    "images": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["web", "runner"],
+      "properties": {
+        "web":    { "type": "string" },
+        "runner": { "type": "string" }
+      }
+    },
+    "runnerResources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cpu", "memory"],
+      "properties": {
+        "cpu":    { "type": "string" },
+        "memory": { "type": "string" }
+      }
+    }
+  }
+}

@@ -1,0 +1,82 @@
+# Пересборка системы, сессия 1 из 2: 22 модулей в 11 командах.
+at 12000000
+click 700 620 L
+type ORP.Compile Display.Mod/s ~
+enter
+type ORP.Compile Input.Mod/s Kernel.Mod/s Math.Mod/s ~
+enter
+type ORP.Compile PIO.Mod/s RS232.Mod/s SCC.Mod/s ~
+enter
+type ORP.Compile Viewers.Mod/s FileDir.Mod/s Files.Mod/s ~
+enter
+type ORP.Compile Fonts.Mod/s ~
+enter
+type ORP.Compile Modules.Mod/s ~
+enter
+type ORP.Compile Texts.Mod/s ~
+enter
+type ORP.Compile Oberon.Mod/s PCLink1.Mod/s ~
+enter
+type ORP.Compile RISC.Mod/s ~
+enter
+type ORP.Compile Blink.Mod/s EBNF.Mod/s GraphTool.Mod/s ~
+enter
+type ORP.Compile Graphics.Mod/s MenuViewers.Mod/s ORC.Mod/s ~
+wait 3000000
+shot build/rb1_typed.pbm
+click 690 569 M      # Display
+wait 25000000
+shot build/rb1_c00.pbm
+click 980 6 M
+wait 2000000
+click 690 581 M      # Input Kernel Math
+wait 25000000
+shot build/rb1_c01.pbm
+click 980 6 M
+wait 2000000
+click 690 593 M      # PIO RS232 SCC
+wait 25000000
+shot build/rb1_c02.pbm
+click 980 6 M
+wait 2000000
+click 690 605 M      # Viewers FileDir Files
+wait 53582179
+shot build/rb1_c03.pbm
+click 980 6 M
+wait 2000000
+click 690 617 M      # Fonts
+wait 25000000
+shot build/rb1_c04.pbm
+click 980 6 M
+wait 2000000
+click 690 629 M      # Modules
+wait 25000000
+shot build/rb1_c05.pbm
+click 980 6 M
+wait 2000000
+click 690 641 M      # Texts
+wait 27083594
+shot build/rb1_c06.pbm
+click 980 6 M
+wait 2000000
+click 690 653 M      # Oberon PCLink1
+wait 25000000
+shot build/rb1_c07.pbm
+click 980 6 M
+wait 2000000
+click 690 665 M      # RISC
+wait 25000000
+shot build/rb1_c08.pbm
+click 980 6 M
+wait 2000000
+click 690 677 M      # Blink EBNF GraphTool
+wait 35431932
+shot build/rb1_c09.pbm
+click 980 6 M
+wait 2000000
+click 690 689 M      # Graphics MenuViewers ORC
+wait 59305431
+shot build/rb1_c10.pbm
+click 980 6 M
+wait 2000000
+shot build/rb1_done.pbm

@@ -1,0 +1,69 @@
+{{- $prefix := .Values.namePrefix | default "" }}
+{{- if not $prefix }}
+{{- fail "machine-images: namePrefix обязателен — без него запись каталога перезапишет образ платформы" }}
+{{- end }}
+{{- $platform := dict }}
+{{- range (include "machine-images.platformNames" . | splitList " ") }}
+  {{- $t := trim . }}
+  {{- if $t }}{{ $_ := set $platform $t true }}{{ end }}
+{{- end }}
+{{- $seen := dict }}
+{{- range .Values.images }}
+{{- $full := printf "%s%s" $prefix .name }}
+{{- if hasKey $platform $full }}
+  {{- fail (printf "machine-images: имя %q занято образом платформы — возьмите другое имя или другую приставку" $full) }}
+{{- end }}
+{{- if hasKey $seen $full }}
+  {{- fail (printf "machine-images: имя %q встречается в списке дважды" $full) }}
+{{- end }}
+{{- $_ := set $seen $full true }}
+---
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataVolume
+metadata:
+  name: vm-default-images-{{ $full }}
+  namespace: cozy-public
+  labels:
+    app.kubernetes.io/managed-by: cozystack
+    forgotten-systems.io/source: marketplace
+  annotations:
+    vm-default-images.cozystack.io/name: {{ $full | quote }}
+    {{- with .os }}
+    {{- with .family }}
+    vm-default-images.cozystack.io/os-family: {{ . | quote }}
+    {{- end }}
+    {{- with .name }}
+    vm-default-images.cozystack.io/os-name: {{ . | quote }}
+    {{- end }}
+    {{- with .version }}
+    vm-default-images.cozystack.io/os-version: {{ . | quote }}
+    {{- end }}
+    {{- end }}
+    {{- with .architecture }}
+    vm-default-images.cozystack.io/architecture: {{ . | quote }}
+    {{- end }}
+    {{- with .description }}
+    vm-default-images.cozystack.io/description: {{ . | quote }}
+    {{- end }}
+    {{- with .emulates }}
+    forgotten-systems.io/emulates: {{ .machine | quote }}
+    {{- with .note }}
+    forgotten-systems.io/emulates-note: {{ . | quote }}
+    {{- end }}
+    {{- end }}
+    cdi.kubevirt.io/storage.bind.immediate.requested: "true"
+    cdi.kubevirt.io/storage.usePopulator: "true"
+spec:
+  contentType: kubevirt
+  source:
+    http:
+      url: {{ .url | quote }}
+  storage:
+    resources:
+      requests:
+        storage: {{ default "20Gi" .storage }}
+    {{- $sc := .storageClass | default $.Values.storageClass }}
+    {{- with $sc }}
+    storageClassName: {{ . | quote }}
+    {{- end }}
+{{- end }}

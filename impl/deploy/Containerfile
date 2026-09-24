@@ -1,0 +1,32 @@
+# Образ с инструментарием для лабораторных, которым не хватает браузера:
+# правка процессора и правка компилятора. Внутри — Verilator, сборка C++,
+# Python и Node, то есть ровно то, чем проверяется работа на хосте.
+#
+# Зачем контейнер. Лабораторные 10 и 11 из программы курса требуют пересборки
+# Verilog и компилятора Оберона; в браузере это невозможно. Зато это обычная
+# пакетная нагрузка: дал правку — получил вердикт. Такое запускается и локально,
+# и заданием в кластере.
+FROM debian:trixie-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      verilator g++ make python3 nodejs ca-certificates \
+      libpython3-dev perl \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /lab
+# Копируется только то, что нужно для сборки и проверок: build/ не переносится,
+# иначе образ тащит сто мегабайт чужих артефактов и ломает воспроизводимость.
+COPY rtl/     rtl/
+COPY tb/      tb/
+COPY tools/   tools/
+COPY tests/   tests/
+COPY scripts/ scripts/
+COPY ext/     ext/
+COPY web/     web/
+COPY docs/    docs/
+COPY Makefile ./
+COPY deploy/lab.sh /usr/local/bin/lab
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENTRYPOINT ["/usr/local/bin/lab"]
+CMD ["help"]
