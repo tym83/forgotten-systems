@@ -8,17 +8,23 @@
     :root { --bg:#16181c; --fg:#e6e6e6; --mut:#9aa0a6; --line:#2e3238;
             --ok:#4ec36e; --no:#e06c6c; --acc:#7aa7e8; } }
   * { box-sizing: border-box }
+  /* Раскладка во всю высоту окна: шапка и экран стоят на месте, прокручивается
+     только колонка с заданиями. Иначе кнопка «Проверить» уезжает вверх вместе
+     с тем, что она просит проверить глазами. */
+  html, body { height:100% }
   body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.5
-         ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+         ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+         display:flex; flex-direction:column; overflow:hidden }
+  header { flex:none }
   header { padding:10px 16px; border-bottom:1px solid var(--line);
            display:flex; gap:14px; align-items:baseline; flex-wrap:wrap }
   header h1 { font-size:15px; margin:0; font-weight:600 }
   select, button { font:inherit; padding:5px 10px; border:1px solid var(--line);
                    border-radius:6px; background:transparent; color:inherit; cursor:pointer }
   button:hover { border-color:var(--acc) }
-  main { display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:16px; padding:16px;
-         align-items:start }
-  @media (max-width:1100px) { main { grid-template-columns:1fr } }
+  main { flex:1; min-height:0; display:grid;
+         grid-template-columns:minmax(0,1fr) 380px; gap:16px; padding:16px }
+  .panel { min-height:0; overflow-y:auto; padding-right:4px }
   /* Экран закреплён, а колонка с заданиями мотается: иначе кнопка «Проверить»
      уезжает вверх вместе с тем, что надо проверять глазами. */
   .stage { position:sticky; top:12px; align-self:start }
@@ -29,14 +35,25 @@
      самый резкий; целое двукратное увеличение тоже резкое, промежуточные —
      мылят, поэтому подписаны честно. Экран не обязан влезать в окно: при
      крупном масштабе колонка прокручивается. */
-  .stage { --k: 1 }
+  /* Экран машины — 1024x768. Режим «вписать» подгоняет его под колонку (может
+     чуть мылить на нецелом масштабе), остальные дают точный размер, а если он
+     больше колонки — прокручивается сама рамка экрана, не страница. */
+  .stage { --k:1; min-width:0; min-height:0; overflow:auto }
   canvas { image-rendering:pixelated; border:1px solid var(--line);
            background:#fff; display:block; margin:0 auto;
            width:calc(1024px * var(--k)); height:auto;
-           max-width:100%; aspect-ratio:1024/768 }
-  /* На узком экране колонки схлопываются в одну, и закреплённый экран занял бы
-     её целиком — там он мотается вместе со всем. */
-  @media (max-width:1100px) { .stage { position:static } }
+           max-width:none; aspect-ratio:1024/768 }
+  .stage.fit canvas { width:100%; max-width:100% }
+
+  /* На узком экране колонки схлопываются, и держать всё враспор нечем:
+     возвращаемся к обычной прокрутке страницы. */
+  @media (max-width:1100px) {
+    html, body { height:auto }
+    body { overflow:visible; display:block }
+    main { display:block; min-height:0 }
+    .panel, .stage { overflow:visible; min-height:0 }
+    .stage.fit canvas { width:100% }
+  }
   .panel > section { border:1px solid var(--line); border-radius:8px; padding:12px;
                      margin-bottom:12px }
   .intro { color:var(--mut) }
@@ -67,15 +84,23 @@
   <a href="book/index.html" style="color:var(--acc)">Методичка</a>
   <button id="reset">Откатить</button>
   <button id="pause">Пауза</button>
+  <label class="stat">мышь
+    <select id="btn">
+      <option value="4">левая — ставит курсор</option>
+      <option value="2">средняя — запускает</option>
+      <option value="1">правая — выделяет</option>
+    </select>
+  </label>
   <label class="stat">масштаб
     <select id="zoom">
+      <option value="fit">вписать в окно</option>
       <option value="1">1:1 — резко</option>
       <option value="1.25">1,25×</option>
       <option value="1.5">1,5×</option>
       <option value="2">2× — крупно</option>
     </select>
   </label>
-  <span class="stat" id="stat">загрузка…</span>
+  <span class="stat" id="stat" title="Сколько команд выполнил процессор; адрес выполняемой сейчас команды; меняется ли картинка">загрузка…</span>
 </header>
 
 <main>
@@ -167,14 +192,14 @@ function render() {
   });
 }
 
+let lastCrc = -1;
 $('pick').onchange = e => { lab = LABS[+e.target.value]; lab.state = {}; render(); };
 // Масштаб экрана. Выбор запоминается: человек настраивает его один раз.
 const stage = document.querySelector('.stage'), zoom = $('zoom');
 function applyZoom(k) {
-  stage.style.setProperty('--k', k);
-  // Закрепление имеет смысл, только пока экран целиком помещается в окно.
-  // При крупном масштабе он выше окна, и прилипание прячет его низ.
-  stage.style.position = (k > 1.25 ? 'static' : '');
+  const fit = (k === 'fit');
+  stage.classList.toggle('fit', fit);
+  if (!fit) stage.style.setProperty('--k', k);
 }
 try {
   const saved = localStorage.getItem('oberon-zoom');
@@ -185,6 +210,9 @@ zoom.onchange = () => {
   applyZoom(zoom.value);
   try { localStorage.setItem('oberon-zoom', zoom.value); } catch (e) {}
 };
+
+// Переключатель кнопки: на трекпаде средней нет, а правой протяжки не бывает.
+$('btn').onchange = e => m.setButton(+e.target.value);
 
 $('reset').onclick = () => { m.reset(); lab.state = {}; view.draw(); render(); };
 $('pause').onclick = () => {
@@ -200,8 +228,11 @@ $('poke').onclick = () => {
 render();
 view.start();
 setInterval(() => {
+  // Сумма кадрового буфера сама по себе человеку ничего не говорит — показываем
+  // из неё то единственное, что важно: рисует машина или замерла.
+  const crc = m.fbCrc(), drawing = crc !== lastCrc; lastCrc = crc;
   $('stat').textContent =
-    `${(m.insns / 1e6).toFixed(1)} млн инструкций · PC=${hex(m.pc)} · экран ${hex(m.fbCrc())}`;
+    `${(m.insns / 1e6).toFixed(1)} млн команд · адрес ${hex(m.pc)} · экран ${drawing ? 'меняется' : 'замер'}`;
   $('pc').textContent = hex(m.pc);
 }, 250);
 </script>
