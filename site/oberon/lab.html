@@ -36,6 +36,13 @@
   input { font:12px ui-monospace,Menlo,monospace; width:96px; padding:4px 6px;
           border:1px solid var(--line); border-radius:5px; background:transparent; color:inherit }
   .hint { color:var(--mut); font-size:13px }
+  .payoff-box { border-left:2px solid var(--acc) }
+  .payoff-h { font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+              color:var(--acc); margin:0 0 6px }
+  #payoff { font-size:13.5px; line-height:1.55 }
+  #payoff ul { margin:6px 0 0 -18px }
+  pre.want { background:var(--code); padding:8px 10px; overflow-x:auto;
+             font:11px/1.45 ui-monospace,Menlo,monospace; margin:8px 0 }
 </style>
 
 <header>
@@ -67,6 +74,8 @@
     <section>
       <ol id="steps"></ol>
     </section>
+    <section class="payoff-box"><h2 class="payoff-h">В чём тут дело</h2>
+      <div id="payoff"></div></section>
     <section><div class="hint" id="hint"></div></section>
   </div>
 </main>
@@ -97,6 +106,8 @@ function render() {
   $('level').textContent = '· ' + lab.level;
   $('intro').innerHTML = lab.intro;
   $('hint').innerHTML = '<b>Подсказка.</b> ' + lab.hint;
+  $('payoff').innerHTML = lab.payoff || '';
+  document.querySelector('.payoff-box').hidden = !lab.payoff;
   $('toolbox').hidden = lab.tools !== 'poke';
   // Подписи клавиши-модификатора зависят от системы, а разметка приходит
   // строкой из labs.js — проставляем после каждой перерисовки.
