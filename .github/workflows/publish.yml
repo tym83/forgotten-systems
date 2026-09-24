@@ -93,3 +93,71 @@ jobs:
           echo "${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.tag }}" >> "$GITHUB_STEP_SUMMARY"
           echo "${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  # ── Три репозитория каталога как OCI-артефакты ────────────────────────────
+  #
+  # Публикует их flux: артефакт каталога — это не образ контейнера, а слепок
+  # дерева файлов, и собирает его именно он. cozypkg сверху добавляет проверку
+  # структуры и отказывается публиковать то, что не разберёт платформа.
+  #
+  # Оба инструмента ставятся в раннер и живут только на время сборки.
+  catalog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0     # cozypkg берёт из git источник и ревизию артефакта
+
+      - name: Поставить flux
+        uses: fluxcd/flux2/action@main
+
+      # Версия прибита, сумма сверяется: иначе в сборку попадёт то, чего никто
+      # не проверял.
+      - name: Поставить cozypkg
+        env:
+          COZYPKG_VERSION: v1.6.3
+        run: |
+          set -euo pipefail
+          base="https://github.com/cozystack/cozystack/releases/download/$COZYPKG_VERSION"
+          curl -fsSLO "$base/cozypkg-linux-amd64.tar.gz"
+          curl -fsSLO "$base/cozypkg-checksums.txt"
+          grep 'cozypkg-linux-amd64.tar.gz' cozypkg-checksums.txt | sha256sum -c -
+          tar xzf cozypkg-linux-amd64.tar.gz
+          sudo install -m755 cozypkg /usr/local/bin/cozypkg
+          cozypkg --help >/dev/null && echo "cozypkg на месте"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: sigstore/cosign-installer@v3
+
+      - name: Проверить каталог перед публикацией
+        run: |
+          set -euo pipefail
+          for r in machines languages images; do
+            echo "── repos/$r"
+            cozypkg validate "marketplace/repos/$r"
+          done
+
+      - name: Выложить и подписать
+        run: |
+          set -euo pipefail
+          tag="${{ github.event.inputs.tag }}"
+          [ -n "$tag" ] || tag="${GITHUB_REF##*/}"
+          [ "$tag" != "$GITHUB_REF" ] || tag=dev
+          owner=$(echo "${{ github.repository_owner }}" | tr 'A-Z' 'a-z')
+          echo "### Каталог" >> "$GITHUB_STEP_SUMMARY"
+          for r in machines languages images; do
+            ref="ghcr.io/$owner/paleocomputing/$r:$tag"
+            cozypkg push "oci://$ref" --path "marketplace/repos/$r"
+            # Подписывается дайджест: cosign сам разрешает тег в него.
+            cosign sign --yes "$ref"
+            cosign verify \
+              --certificate-identity-regexp "^https://github.com/${{ github.repository }}/" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+              "$ref" >/dev/null
+            echo "- \`$ref\` — выложен и подпись проверена" >> "$GITHUB_STEP_SUMMARY"
+          done
