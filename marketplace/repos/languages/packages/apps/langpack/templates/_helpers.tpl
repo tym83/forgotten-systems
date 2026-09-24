@@ -3,7 +3,7 @@ app.kubernetes.io/name: langpack
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-forgotten-systems.io/language: {{ .Values.language | quote }}
+paleocomputing.io/language: {{ .Values.language | quote }}
 {{- end }}
 
 {{- define "langpack.selector" -}}

@@ -17,7 +17,7 @@ spec:
       sharding.fluxcd.io/key: tenants
     chartRef:
       kind: ExternalArtifact
-      name: forgotten-systems-machines-default-workbench
+      name: paleocomputing-machines-default-workbench
       namespace: cozy-system
   dashboard:
     singular: Workbench

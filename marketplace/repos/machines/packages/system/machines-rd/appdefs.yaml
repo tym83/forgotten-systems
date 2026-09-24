@@ -2,7 +2,7 @@
 #
 # Схемы приложений сюда не переписываются: генератор берёт их прямо из
 # values.schema.json соответствующего чарта.
-packageSource: forgotten-systems.machines
+packageSource: paleocomputing.machines
 variant: default
 artifactNamespace: cozy-system
 

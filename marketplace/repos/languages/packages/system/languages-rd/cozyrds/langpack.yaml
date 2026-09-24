@@ -17,7 +17,7 @@ spec:
       sharding.fluxcd.io/key: tenants
     chartRef:
       kind: ExternalArtifact
-      name: forgotten-systems-languages-default-langpack
+      name: paleocomputing-languages-default-langpack
       namespace: cozy-system
   dashboard:
     singular: Language Pack

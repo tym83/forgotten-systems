@@ -27,9 +27,9 @@ ingressClassName: ""
 ## заменяются дефисами (internal/marketplace/naming). Менять эти значения нужно
 ## только если репозиторий переименован.
 
-## @param {string} artifactPrefix=forgotten-systems-machines-default - Общее
+## @param {string} artifactPrefix=paleocomputing-machines-default - Общее
 ## начало имён артефактов этого репозитория.
-artifactPrefix: forgotten-systems-machines-default
+artifactPrefix: paleocomputing-machines-default
 
 ## @param {string} artifactNamespace=cozy-system - Пространство имён, где лежат
 ## артефакты подключённого репозитория.
