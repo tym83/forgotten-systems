@@ -9,7 +9,7 @@
   /* Экран стоит на месте, мотается только пояснение под ним. */
   #wrap { display:flex; justify-content:center; padding:0 10px 14px;
           position:sticky; top:0; background:#1b1b1b; z-index:1 }
-  canvas { background:#fff; image-rendering:pixelated; max-width:100%; height:auto; max-height:calc(100vh - 86px);
+  canvas { background:#fff; image-rendering:pixelated; max-width:min(100%, 1024px); height:auto; max-height:calc(100vh - 86px);
            box-shadow:0 0 0 1px #333; cursor:crosshair; }
   .hint { font-size:12px; color:#8a8a8a; padding:0 14px 12px; }
   kbd { background:#333; border-radius:3px; padding:1px 5px; font:11px ui-monospace,monospace; }

@@ -22,10 +22,14 @@
   /* Экран закреплён, а колонка с заданиями мотается: иначе кнопка «Проверить»
      уезжает вверх вместе с тем, что надо проверять глазами. */
   .stage { position:sticky; top:12px; align-self:start }
+  /* Никогда не увеличиваем сверх натурального размера: у машины экран
+     1024x768, и при 1:1 точка машины ложится в точку экрана — текст резкий.
+     Растянутая канва и крупнее, чем нужно, и мылится на нецелом масштабе. */
   canvas { image-rendering:pixelated; border:1px solid var(--line);
            background:#fff; display:block; margin:0 auto;
-           width:auto; height:auto; max-width:100%;
-           max-height:calc(100vh - 92px); aspect-ratio:1024/768 }
+           width:auto; height:auto;
+           max-width:min(100%, 1024px);
+           max-height:calc(100vh - 100px); aspect-ratio:1024/768 }
   /* На узком экране колонки схлопываются в одну, и закреплённый экран занял бы
      её целиком — там он мотается вместе со всем. */
   @media (max-width:1100px) { .stage { position:static } }
