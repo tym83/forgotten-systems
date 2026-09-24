@@ -105,6 +105,30 @@ def check_validate() -> None:
         errs = re.search(r"(\d+) error", tail)
         report(bool(errs) and errs.group(1) == "0", f"repos/{repo}: {tail}")
 
+    # ⚠ Проверять надо и то, что реально уезжает в реестр. В артефакт попадает
+    # ТОЛЬКО содержимое packages/, с отброшенной приставкой. Манифест источника
+    # когда-то лежал рядом, в sources/, и молча терялся при публикации: дерево
+    # исходников проходило проверку, а опубликованное — нет. Поймано только
+    # круговым прогоном через настоящий реестр.
+    for repo in REPOS:
+        r = run([COZYPKG, "validate", f"repos/{repo}/packages"])
+        tail = r.stdout.strip().splitlines()[-1] if r.stdout.strip() else "(пусто)"
+        errs = re.search(r"(\d+) error", tail)
+        report(bool(errs) and errs.group(1) == "0",
+               f"repos/{repo} в опубликованной форме: {tail}")
+
+    # Мутация: убрать манифест источника из packages/ — публикуемая форма
+    # обязана перестать проходить.
+    src = ROOT / "repos/machines/packages/sources/machines.yaml"
+    moved = ROOT / "repos/machines/sources-moved-for-test.yaml"
+    try:
+        src.rename(moved)
+        bad = run([COZYPKG, "validate", "repos/machines/packages"])
+        report("no-packagesource" in bad.stdout,
+               "мутация: манифест источника вне packages/ ломает публикуемую форму")
+    finally:
+        moved.rename(src)
+
     # Мутация: испортить ссылку на чарт — валидатор обязан заметить.
     victim = ROOT / "repos/machines/packages/system/machines-rd/cozyrds/oberon-lab.yaml"
     original = victim.read_text(encoding="utf-8")
