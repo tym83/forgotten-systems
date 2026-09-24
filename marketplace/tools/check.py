@@ -55,7 +55,7 @@ def artifact_name(ps: str, variant: str, component: str) -> str:
 
 
 def load_source(repo: str) -> dict:
-    files = list((ROOT / "repos" / repo / "sources").glob("*.yaml"))
+    files = list((ROOT / "repos" / repo / "packages" / "sources").glob("*.yaml"))
     assert len(files) == 1, f"{repo}: ожидался ровно один файл источника"
     return yaml.safe_load(files[0].read_text(encoding="utf-8"))
 
