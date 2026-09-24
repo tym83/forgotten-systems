@@ -9,7 +9,7 @@
   /* Экран стоит на месте, мотается только пояснение под ним. */
   #wrap { display:flex; justify-content:center; padding:0 10px 14px;
           position:sticky; top:0; background:#1b1b1b; z-index:1 }
-  canvas { background:#fff; image-rendering:pixelated; max-width:min(100%, 1024px); height:auto; max-height:calc(100vh - 86px);
+  canvas { background:#fff; image-rendering:pixelated; width:calc(1024px * var(--k, 1)); max-width:100%; height:auto; aspect-ratio:1024/768;
            box-shadow:0 0 0 1px #333; cursor:crosshair; }
   .hint { font-size:12px; color:#8a8a8a; padding:0 14px 12px; }
   kbd { background:#333; border-radius:3px; padding:1px 5px; font:11px ui-monospace,monospace; }
@@ -21,6 +21,14 @@
 <header>
   <h1>Project Oberon — ядро RISC5 на настоящем Verilog</h1>
   <div id="stat">загрузка…</div>
+  <label class="stat" style="margin-left:auto;font-size:12px;color:#8a8a8a">масштаб
+    <select id="zoom" style="font:inherit;background:#222;color:#ddd;border:1px solid #333;border-radius:5px;padding:3px 6px">
+      <option value="1">1:1 — резко</option>
+      <option value="1.25">1,25×</option>
+      <option value="1.5">1,5×</option>
+      <option value="2">2× — крупно</option>
+    </select>
+  </label>
 </header>
 <div id="wrap"><canvas id="scr" width="1024" height="768"></canvas></div>
 <div class="hint">
@@ -210,4 +218,20 @@ window.__step = (n) => { M._soc_run(n | 0); draw(fbView()); return M._soc_insns(
 stat.textContent = document.hidden ? 'вкладка скрыта — ждём' : 'цикл запускается…';
 pushMouse();
 kick();
+
+// Масштаб экрана, выбор запоминается между заходами.
+{
+  const wrap = document.getElementById('wrap'), z = document.getElementById('zoom');
+  const apply = k => {
+    wrap.style.setProperty('--k', k);
+    // Прилипание держим только пока экран влезает в окно.
+    wrap.style.position = (k > 1.25 ? 'static' : 'sticky');
+  };
+  try {
+    const s = localStorage.getItem('oberon-zoom');
+    if (s && [...z.options].some(o => o.value === s)) z.value = s;
+  } catch (e) {}
+  apply(z.value);
+  z.onchange = () => { apply(z.value); try { localStorage.setItem('oberon-zoom', z.value); } catch (e) {} };
+}
 </script>

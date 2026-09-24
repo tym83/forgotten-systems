@@ -25,11 +25,15 @@
   /* Никогда не увеличиваем сверх натурального размера: у машины экран
      1024x768, и при 1:1 точка машины ложится в точку экрана — текст резкий.
      Растянутая канва и крупнее, чем нужно, и мылится на нецелом масштабе. */
+  /* У машины экран 1024x768. При 1:1 её точка ложится в точку экрана и текст
+     самый резкий; целое двукратное увеличение тоже резкое, промежуточные —
+     мылят, поэтому подписаны честно. Экран не обязан влезать в окно: при
+     крупном масштабе колонка прокручивается. */
+  .stage { --k: 1 }
   canvas { image-rendering:pixelated; border:1px solid var(--line);
            background:#fff; display:block; margin:0 auto;
-           width:auto; height:auto;
-           max-width:min(100%, 1024px);
-           max-height:calc(100vh - 100px); aspect-ratio:1024/768 }
+           width:calc(1024px * var(--k)); height:auto;
+           max-width:100%; aspect-ratio:1024/768 }
   /* На узком экране колонки схлопываются в одну, и закреплённый экран занял бы
      её целиком — там он мотается вместе со всем. */
   @media (max-width:1100px) { .stage { position:static } }
@@ -63,6 +67,14 @@
   <a href="book/index.html" style="color:var(--acc)">Методичка</a>
   <button id="reset">Откатить</button>
   <button id="pause">Пауза</button>
+  <label class="stat">масштаб
+    <select id="zoom">
+      <option value="1">1:1 — резко</option>
+      <option value="1.25">1,25×</option>
+      <option value="1.5">1,5×</option>
+      <option value="2">2× — крупно</option>
+    </select>
+  </label>
   <span class="stat" id="stat">загрузка…</span>
 </header>
 
@@ -156,6 +168,24 @@ function render() {
 }
 
 $('pick').onchange = e => { lab = LABS[+e.target.value]; lab.state = {}; render(); };
+// Масштаб экрана. Выбор запоминается: человек настраивает его один раз.
+const stage = document.querySelector('.stage'), zoom = $('zoom');
+function applyZoom(k) {
+  stage.style.setProperty('--k', k);
+  // Закрепление имеет смысл, только пока экран целиком помещается в окно.
+  // При крупном масштабе он выше окна, и прилипание прячет его низ.
+  stage.style.position = (k > 1.25 ? 'static' : '');
+}
+try {
+  const saved = localStorage.getItem('oberon-zoom');
+  if (saved && [...zoom.options].some(o => o.value === saved)) zoom.value = saved;
+} catch (e) { /* приватное окно — просто остаёмся на 1:1 */ }
+applyZoom(zoom.value);
+zoom.onchange = () => {
+  applyZoom(zoom.value);
+  try { localStorage.setItem('oberon-zoom', zoom.value); } catch (e) {}
+};
+
 $('reset').onclick = () => { m.reset(); lab.state = {}; view.draw(); render(); };
 $('pause').onclick = () => {
   if (view.running) { view.stop(); $('pause').textContent = 'Пуск'; }
