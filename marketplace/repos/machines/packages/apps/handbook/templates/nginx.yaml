@@ -1,0 +1,48 @@
+{{- if not .Values.image }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-nginx
+  labels: {{- include "handbook.labels" . | nindent 4 }}
+# ⚠ worker_processes прибит единицей намеренно.
+#
+# У стокового образа стоит auto, и nginx заводит воркер на каждое ядро УЗЛА,
+# а не на выделенный предел. На узле с 96 ядрами это 96 процессов, они не
+# влезают в 64Mi, и под уходит в бесконечную перезагрузку по нехватке памяти.
+# Найдено на живом кластере: HelmRelease успешен, приложение мертво.
+#
+# Штатный скрипт автонастройки образа тут не помогает: он правит
+# /etc/nginx/nginx.conf, а корень контейнера у нас только для чтения, и
+# скрипт молча выходит. Поэтому конфигурация подкладывается целиком.
+#
+# Раздаче статики больше одного воркера и не нужно: всё упирается в сеть.
+data:
+  nginx.conf: |
+    worker_processes 1;
+    error_log /var/log/nginx/error.log notice;
+    pid /tmp/nginx.pid;
+
+    events {
+      worker_connections 1024;
+    }
+
+    http {
+      proxy_temp_path      /tmp/proxy_temp;
+      client_body_temp_path /tmp/client_temp;
+      fastcgi_temp_path    /tmp/fastcgi_temp;
+      uwsgi_temp_path      /tmp/uwsgi_temp;
+      scgi_temp_path       /tmp/scgi_temp;
+
+      include       /etc/nginx/mime.types;
+      default_type  application/octet-stream;
+      sendfile      on;
+      keepalive_timeout 65;
+
+      server {
+        listen 8080;
+        server_name localhost;
+        root /usr/share/nginx/html;
+        index index.html;
+      }
+    }
+{{- end }}

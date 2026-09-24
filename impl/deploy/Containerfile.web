@@ -11,8 +11,16 @@ FROM nginxinc/nginx-unprivileged:1.29-alpine
 COPY --chown=101:101 web/ /usr/share/nginx/html/
 
 # WASM без правильного типа браузер отказывается компилировать потоком.
+#
+# ⚠ Заодно прибиваем число воркеров. У стокового образа стоит auto, и nginx
+# заводит процесс на каждое ядро УЗЛА, а не на выделенный предел: на узле с
+# 96 ядрами это 96 процессов, которые не влезают в отведённую память, и под
+# уходит в бесконечную перезагрузку. Найдено на живом кластере. Штатный
+# скрипт автонастройки не спасает — он правит конфигурацию на месте, а корень
+# контейнера только для чтения.
 USER root
-RUN printf '%s\n' \
+RUN sed -i 's/^worker_processes.*/worker_processes 1;/' /etc/nginx/nginx.conf \
+ && printf '%s\n' \
   'types { application/wasm wasm; }' \
   'gzip on;' \
   'gzip_types application/wasm application/javascript text/css text/html;' \

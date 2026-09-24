@@ -215,8 +215,10 @@ def check_handbook() -> None:
     body = "первая строка\nвторая строка\n<tag> & \"кавычки\"\n"
     pages = json.dumps([{"name": "p1", "title": "Глава <1>", "body": body}])
     r = run(["helm", "template", "h", str(chart), "--set-json", f"pages={pages}"])
+    # ConfigMap теперь два — страницы и конфигурация nginx; берём нужный.
     cm = next((d for d in yaml.safe_load_all(r.stdout)
-               if isinstance(d, dict) and d.get("kind") == "ConfigMap"), None)
+               if isinstance(d, dict) and d.get("kind") == "ConfigMap"
+               and d["metadata"]["name"].endswith("-pages")), None)
     report(cm is not None, "страницы собираются в ConfigMap")
     if cm:
         page = cm["data"]["p1.html"]
@@ -324,6 +326,37 @@ def check_schema_roots() -> None:
         victim.write_text(original, encoding="utf-8")
 
 
+# ─── 9. nginx не должен заводить воркер на каждое ядро узла ─────────────────
+def check_nginx_workers() -> None:
+    print("\nЧисло рабочих процессов nginx")
+    # ⚠ Найдено на живом кластере. У стокового образа worker_processes стоит
+    # auto, и nginx смотрит на ядра УЗЛА, а не на выделенный предел: на узле
+    # с 96 ядрами это 96 процессов, они не влезают в отведённую память, и под
+    # уходит в бесконечную перезагрузку. При этом HelmRelease успешен —
+    # отказ виден только по состоянию пода.
+    chart = ROOT / "repos/machines/packages/apps/handbook"
+    pages = json.dumps([{"name": "p", "title": "П", "body": "т"}])
+    r = run(["helm", "template", "h", str(chart), "--set-json", f"pages={pages}"])
+    docs = [d for d in yaml.safe_load_all(r.stdout) if isinstance(d, dict)]
+
+    cm = next((d for d in docs if d.get("kind") == "ConfigMap"
+               and d["metadata"]["name"].endswith("-nginx")), None)
+    report(cm is not None, "методичка подкладывает свою конфигурацию nginx")
+    if cm:
+        report("worker_processes 1;" in cm["data"]["nginx.conf"],
+               "в ней число воркеров прибито, а не auto")
+
+    dep = next((d for d in docs if d.get("kind") == "Deployment"), None)
+    mounts = dep["spec"]["template"]["spec"]["containers"][0]["volumeMounts"] if dep else []
+    report(any(m.get("subPath") == "nginx.conf" for m in mounts),
+           "конфигурация примонтирована поверх штатной")
+
+    # Наш собственный образ раздачи собран на том же nginx — там тот же риск.
+    cf = (ROOT.parent / "impl/deploy/Containerfile.web").read_text(encoding="utf-8")
+    report("worker_processes 1;" in cf,
+           "наш образ раздачи тоже прибивает число воркеров")
+
+
 def main() -> None:
     print("Проверки каталога «Забытые системы»")
     check_index()
@@ -334,6 +367,7 @@ def main() -> None:
     check_images()
     check_langpack()
     check_schema_roots()
+    check_nginx_workers()
     print(f"\nИтог: успешно {ok_count}, провалено {fail_count}")
     sys.exit(1 if fail_count else 0)
 

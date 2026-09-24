@@ -38,6 +38,10 @@ spec:
             - { name: run,   mountPath: /tmp }
             {{- if not .Values.image }}
             - { name: pages, mountPath: /usr/share/nginx/html, readOnly: true }
+            - name: nginxconf
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+              readOnly: true
             {{- end }}
       volumes:
         - { name: cache, emptyDir: {} }
@@ -46,6 +50,9 @@ spec:
         - name: pages
           configMap:
             name: {{ .Release.Name }}-pages
+        - name: nginxconf
+          configMap:
+            name: {{ .Release.Name }}-nginx
         {{- end }}
 ---
 apiVersion: v1
