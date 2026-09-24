@@ -40,7 +40,7 @@ static uint64_t io_read(void *opaque, hwaddr addr, unsigned size)
     case 3:
         return 2;                       /* передатчик готов, приёмник пуст */
     case 4:
-        return s->spi_rx;
+        return oberon_disk_read(&s->disk);
     case 5:
         return 1;                       /* обмен по SPI всегда завершён */
     case 6:
@@ -68,11 +68,10 @@ static void io_write(void *opaque, hwaddr addr, uint64_t val, unsigned size)
         break;
     case 4:
         /*
-         * Запись начинает обмен по SPI. Пока отвечаем 0xFF — так ведёт себя
-         * шина, когда устройство не выбрано. Диск будет здесь.
+         * Запись начинает обмен по SPI. Устройство на шине одно — карта SD,
+         * с которой загружается система.
          */
-        s->spi_tx = val;
-        s->spi_rx = 0xFFFFFFFF;
+        oberon_disk_write(&s->disk, val);
         break;
     case 5:
         s->spi_ctrl = val & 0xF;        /* выбор устройства, скорость */
@@ -96,11 +95,12 @@ static const MemoryRegionOps io_ops = {
     .endianness = DEVICE_LITTLE_ENDIAN,
 };
 
-void oberon_io_init(OberonIOState *s, MemoryRegion *sys, hwaddr base)
+void oberon_io_init(OberonIOState *s, MemoryRegion *sys, hwaddr base,
+                    BlockBackend *blk)
 {
     s->start_ms = qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL);
-    s->spi_rx = 0xFFFFFFFF;
     s->kbd_ready = false;
+    oberon_disk_init(&s->disk, blk);
 
     memory_region_init_io(&s->mr, NULL, &io_ops, s, "oberon.io", 0x40);
     memory_region_add_subregion(sys, base, &s->mr);
