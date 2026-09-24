@@ -10,7 +10,7 @@ spec:
     kind: Handbook
     plural: handbooks
     singular: handbook
-    openAPISchema: '{"$schema":"http://json-schema.org/draft-07/schema#","title":"handbook","type":"object","additionalProperties":false,"properties":{"title":{"type":"string","minLength":1},"image":{"type":"string"},"baseImage":{"type":"string","minLength":1},"replicas":{"type":"integer","minimum":0},"host":{"type":"string"},"ingressClassName":{"type":"string"},"pages":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["name","title","body"],"properties":{"name":{"type":"string","pattern":"^[a-z0-9][a-z0-9-]*$"},"title":{"type":"string","minLength":1},"body":{"type":"string"}}}}}}'
+    openAPISchema: '{"$schema":"http://json-schema.org/draft-07/schema#","title":"handbook","type":"object","$comment":"Корень схемы НЕ закрыт намеренно: cozystack-engine подмешивает в values любого приложения тенанта свои ключи (_cluster, _namespace), и при additionalProperties:false Helm отвергает значения целиком — приложение не разворачивается. Ни один чарт платформы корень не закрывает. Вложенные объекты закрыты: туда движок ничего не кладёт.","properties":{"title":{"type":"string","minLength":1},"image":{"type":"string"},"baseImage":{"type":"string","minLength":1},"replicas":{"type":"integer","minimum":0},"host":{"type":"string"},"ingressClassName":{"type":"string"},"pages":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["name","title","body"],"properties":{"name":{"type":"string","pattern":"^[a-z0-9][a-z0-9-]*$"},"title":{"type":"string","minLength":1},"body":{"type":"string"}}}}}}'
   release:
     prefix: handbook-
     labels:
