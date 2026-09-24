@@ -292,6 +292,18 @@ static bool trans_F2_mem(DisasContext *ctx, arg_F2_mem *r)
 
     if (!r->u) {
         tcg_gen_qemu_ld_i32(cpu_r[r->a], addr, 0, r->v ? MO_UB : MO_TEUL);
+        /*
+         * ⚠ Загрузка СТАВИТ ФЛАГИ. В железе (RISC5.v:170,204,205) признаки N
+         * и Z берутся с ЛЮБОЙ записи в регистр — regwr включает не только
+         * АЛУ, но и загрузку, — а значение берётся записанное.
+         *
+         * Загрузчик на это опирается: идёт LD, сразу за ним BNE, и без
+         * признаков переход уходит не туда. Найдено пошаговой сверкой с
+         * эталоном — разошлись на 224-й команде.
+         *
+         * Запись в память регистра не трогает и флаги не меняет.
+         */
+        gen_logic_flags(cpu_r[r->a]);
     } else {
         tcg_gen_qemu_st_i32(cpu_r[r->a], addr, 0, r->v ? MO_UB : MO_TEUL);
     }
@@ -334,7 +346,16 @@ static bool trans_F3_reg(DisasContext *ctx, arg_F3_reg *r)
     tcg_gen_brcondi_i32(TCG_COND_EQ, cond, 0, skip);
 
     if (r->v) {                                   /* со ссылкой возврата */
-        tcg_gen_movi_i32(cpu_r[RISC5_REG_LNK], ctx->npc_w * 4);
+        uint32_t lnk = (ctx->npc_w * 4) & 0x00FFFFFF;
+
+        /*
+         * Запись адреса возврата — тоже запись в регистр, и признаки она
+         * ставит по тому же правилу. Значение неотрицательно (старшие восемь
+         * бит нулевые), поэтому N нулевой, а Z — только при нулевом адресе.
+         */
+        tcg_gen_movi_i32(cpu_r[RISC5_REG_LNK], lnk);
+        tcg_gen_movi_i32(cpu_n, 0);
+        tcg_gen_movi_i32(cpu_z, lnk == 0);
     }
     /* Адрес перехода лежит в регистре БАЙТОВЫЙ, счётчик считает слова. */
     tcg_gen_shri_i32(cpu_pc, cpu_r[r->c], 2);
@@ -354,7 +375,16 @@ static bool trans_F3_disp(DisasContext *ctx, arg_F3_disp *r)
     tcg_gen_brcondi_i32(TCG_COND_EQ, cond, 0, skip);
 
     if (r->v) {
-        tcg_gen_movi_i32(cpu_r[RISC5_REG_LNK], ctx->npc_w * 4);
+        uint32_t lnk = (ctx->npc_w * 4) & 0x00FFFFFF;
+
+        /*
+         * Запись адреса возврата — тоже запись в регистр, и признаки она
+         * ставит по тому же правилу. Значение неотрицательно (старшие восемь
+         * бит нулевые), поэтому N нулевой, а Z — только при нулевом адресе.
+         */
+        tcg_gen_movi_i32(cpu_r[RISC5_REG_LNK], lnk);
+        tcg_gen_movi_i32(cpu_n, 0);
+        tcg_gen_movi_i32(cpu_z, lnk == 0);
     }
     /*
      * Смещение считается в СЛОВАХ от следующей команды. ORG.Mod излучает
