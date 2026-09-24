@@ -44,11 +44,22 @@ static uint64_t io_read(void *opaque, hwaddr addr, unsigned size)
     case 5:
         return 1;                       /* обмен по SPI всегда завершён */
     case 6:
-        /* Три старших бита — кнопки мыши, бит 28 — есть ли код клавиши. */
-        return s->mouse | (s->kbd_ready ? (1u << 28) : 0);
-    case 7:
-        s->kbd_ready = false;           /* чтение забирает код */
-        return s->kbd_data;
+        /* Кнопки мыши в 26:24, бит 28 — есть ли код клавиши в очереди. */
+        return s->mouse | (s->kbd_head != s->kbd_tail ? (1u << 28) : 0);
+    case 7: {
+        /*
+         * Чтение СНИМАЕТ байт с очереди: в железе это doneKbd = rd & ioenb &
+         * (iowadr == 7). Пустую очередь читать можно, там будет мусор — как и
+         * в схеме, где outptr просто указывает в нетронутую ячейку.
+         */
+        uint8_t v;
+        if (s->kbd_head == s->kbd_tail) {
+            return 0;
+        }
+        v = s->kbd_fifo[s->kbd_tail];
+        s->kbd_tail = (s->kbd_tail + 1) % OBERON_KBD_FIFO;
+        return v;
+    }
     case 8:
         return 0;
     case 9:
@@ -99,7 +110,6 @@ void oberon_io_init(OberonIOState *s, MemoryRegion *sys, hwaddr base,
                     BlockBackend *blk)
 {
     s->start_ms = qemu_clock_get_ms(QEMU_CLOCK_VIRTUAL);
-    s->kbd_ready = false;
     oberon_disk_init(&s->disk, blk);
 
     memory_region_init_io(&s->mr, NULL, &io_ops, s, "oberon.io", 0x40);

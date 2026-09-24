@@ -95,7 +95,9 @@ static void oberon_init(MachineState *machine)
         if (!blk) {
             warn_report("образ диска не задан: добавьте -drive if=none,id=sd0,file=<образ>,format=raw");
         }
-        oberon_io_init(g_new0(OberonIOState, 1), sys, OBERON_IO_BASE, blk);
+        OberonIOState *io = g_new0(OberonIOState, 1);
+        oberon_io_init(io, sys, OBERON_IO_BASE, blk);
+        oberon_input_init(io);
     }
 
     if (machine->firmware) {
