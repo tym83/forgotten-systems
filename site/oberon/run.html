@@ -52,7 +52,7 @@
   <span class="btn" id="b2"></span>правая.
   Оболочка Оберона построена на межкнопочных щелчках — средняя кнопка исполняет текст.
   <b><kbd class="k-alt">Alt</kbd>+левая даёт среднюю вместо левой, а не вместе с ней</b>, поэтому настоящие
-  межкнопочные щелчки доступны только на мыши с тремя физическими кнопками.
+  межкнопочные щелчки — <kbd>Shift</kbd>+левая: она подаёт левую и правую разом, как требует, например, вторая отметка в рисовалке.
   Запись на диск идёт только в память вкладки и при перезагрузке страницы теряется.
   <kbd>Ctrl</kbd> не годится как модификатор: на macOS система превращает его в правую кнопку.
 </div>
@@ -146,17 +146,28 @@ function btnsFrom(e) {
   if (e.buttons & 2) b |= 1;                     // правая
   return b;
 }
+// Межкнопочный щелчок: часть системы требует две кнопки сразу (вторая отметка
+// в рисовалке — левая, к которой добавили правую). На трекпаде так не нажать,
+// поэтому с Shift аккорд собирается здесь, в правильном порядке.
+let chord = false;
 cv.addEventListener('mousemove', e => {
   const r = cv.getBoundingClientRect();
-  mx = Math.round((e.clientX - r.left) * 1024 / r.width);
-  my = Math.round((e.clientY - r.top)  * 768  / r.height);
-  btn = btnsFrom(e); pushMouse();
+  mx = Math.round((e.clientX - r.left) * W / r.width);
+  my = Math.round((e.clientY - r.top) * H / r.height);
+  if (chord && (e.buttons & 1)) { pushMouse(); return; }
+  chord = false; btn = btnsFrom(e); pushMouse();
 });
 cv.addEventListener('mousedown', e => {
   e.preventDefault(); cv.setPointerCapture?.(e.pointerId ?? 1);
-  btn = btnsFrom(e); pushMouse();
+  if (e.shiftKey && !e.altKey && (e.buttons & 1)) {
+    chord = true;
+    btn = 4; pushMouse(); M._soc_run(20000);
+    btn = 5; pushMouse();
+    return;
+  }
+  chord = false; btn = btnsFrom(e); pushMouse();
 });
-window.addEventListener('mouseup', e => { btn = btnsFrom(e); pushMouse(); });
+window.addEventListener('mouseup', e => { chord = false; btn = btnsFrom(e); pushMouse(); });
 cv.addEventListener('contextmenu', e => e.preventDefault());
 cv.addEventListener('auxclick', e => e.preventDefault());
 

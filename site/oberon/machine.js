@@ -200,16 +200,33 @@ export function attach(machine, canvas) {
     if (e.buttons & 2) b |= 1;                        // настоящая правая
     return b;
   };
+  // ⚠ Межкнопочный щелчок. Часть системы требует НАЖАТЬ ДВЕ КНОПКИ СРАЗУ:
+  // например вторая отметка в рисовалке ставится левой, к которой добавили
+  // правую (GraphicFrames.Edit: ветка k1 = {2, 0}). Без второй отметки
+  // Rectangles.Make и Curves.MakeCircle молча ничего не делают.
+  //
+  // На трекпаде двух кнопок сразу не нажать, поэтому аккорд собирается здесь:
+  // с Shift сначала подаётся левая, машина успевает её увидеть, и только потом
+  // добавляется правая. Порядок важен — система смотрит, с чего щелчок начался.
+  let chord = false;
   canvas.addEventListener('mousemove', e => {
     const r = canvas.getBoundingClientRect();
     mx = Math.round((e.clientX - r.left) * W / r.width);
     my = Math.round((e.clientY - r.top) * H / r.height);
-    btn = btnsFrom(e); push();
+    if (chord && (e.buttons & 1)) { push(); return; }   // аккорд держим, двигаем только точку
+    chord = false; btn = btnsFrom(e); push();
   });
   canvas.addEventListener('mousedown', e => {
-    e.preventDefault(); btn = btnsFrom(e); push();
+    e.preventDefault();
+    if (e.shiftKey && !e.altKey && (e.buttons & 1)) {
+      chord = true;
+      btn = 4; push(); machine.run(20000);    // сперва левая
+      btn = 4 | 1; push();                    // и к ней правая
+      return;
+    }
+    chord = false; btn = btnsFrom(e); push();
   });
-  addEventListener('mouseup', e => { btn = btnsFrom(e); push(); });
+  addEventListener('mouseup', e => { chord = false; btn = btnsFrom(e); push(); });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
   canvas.addEventListener('auxclick', e => e.preventDefault());
 
