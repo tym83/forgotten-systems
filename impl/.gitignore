@@ -1,0 +1,15 @@
+build/
+__pycache__/
+*.pyc
+tests/*.bin
+tests/*.chk
+# Собираемые артефакты — правила в Makefile (цели tools, web)
+ext/norebo/norebo.bin
+ext/norebo/norebo.orig.bin
+ext/refemu/refboot
+ext/refemu/reftrace
+web/risc5.js
+web/risc5.wasm
+web/oberon.dsk
+web/oberon.dsk.gz
+web/prom_sd.mem

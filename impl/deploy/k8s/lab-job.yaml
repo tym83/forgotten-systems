@@ -1,0 +1,74 @@
+# Лабораторная как задание в кластере.
+#
+# Замысел: браузерные лабораторные (1–9) не требуют ничего, кроме страницы, а
+# те, что правят процессор или компилятор, требуют инструментария — верилятора,
+# сборки, тестов. Это обычная пакетная нагрузка: дал правку, получил вердикт.
+# Ровно то, что удобно запускать заданием, а не держать на своей машине.
+#
+# Правка учащегося подаётся ConfigMap'ом: имена ключей — пути в дереве проекта
+# с точками вместо косых черт (ограничение ConfigMap на имена ключей), а
+# initContainer раскладывает их обратно.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oberon-lab-work
+data:
+  # пример: изменённое описание процессора
+  rtl.RISC5.v: |
+    // сюда кладётся правка; пустой ключ означает прогон на исходном дереве
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: oberon-lab-isa
+  labels:
+    app.kubernetes.io/name: oberon-lab
+    app.kubernetes.io/component: isa
+spec:
+  backoffLimit: 0                 # вердикт лабораторной, повторять бессмысленно
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        fsGroup: 65532
+      initContainers:
+        - name: unpack
+          image: busybox:1.37
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              for k in /cm/*; do
+                [ -f "$k" ] || continue
+                n=$(basename "$k")
+                # ключ вида rtl.RISC5.v -> путь rtl/RISC5.v: первая точка это
+                # разделитель каталога, остальные принадлежат имени файла
+                dir=${n%%.*}; file=${n#*.}
+                mkdir -p "/work/$dir"
+                cp "$k" "/work/$dir/$file"
+              done
+              ls -R /work
+          volumeMounts:
+            - { name: cm,   mountPath: /cm }
+            - { name: work, mountPath: /work }
+      containers:
+        - name: lab
+          image: ghcr.io/REPLACE-ME/oberon-lab:dev
+          args: ["isa"]
+          volumeMounts:
+            - { name: work, mountPath: /work, readOnly: true }
+          resources:
+            requests: { cpu: "1",   memory: "1Gi" }
+            limits:   { cpu: "2",   memory: "2Gi" }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false   # verilator пишет в build/
+            capabilities: { drop: ["ALL"] }
+      volumes:
+        - name: cm
+          configMap: { name: oberon-lab-work }
+        - name: work
+          emptyDir: {}

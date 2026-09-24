@@ -1,0 +1,22 @@
+{{- if eq .Values.mode "job" }}
+{{- if .Values.host }}
+{{- fail "langpack: host задан, но режим job — разовый прогон нечего выставлять наружу" }}
+{{- end }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}
+  labels: {{- include "langpack.labels" . | nindent 4 }}
+spec:
+  backoffLimit: {{ .Values.backoffLimit }}
+  template:
+    metadata:
+      labels: {{- include "langpack.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - {{- include "langpack.container" . | nindent 10 }}
+      volumes: {{- include "langpack.volumes" . | nindent 8 }}
+{{- end }}

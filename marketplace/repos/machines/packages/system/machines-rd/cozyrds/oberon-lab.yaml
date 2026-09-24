@@ -1,0 +1,50 @@
+# Сгенерировано tools/gen-appdefs.py из appdefs.yaml и
+# apps/oberon-lab/values.schema.json. Руками не править:
+# `make gen` перезапишет, `make check` поймает расхождение.
+apiVersion: cozystack.io/v1alpha1
+kind: ApplicationDefinition
+metadata:
+  name: oberon-lab
+spec:
+  application:
+    kind: OberonLab
+    plural: oberonlabs
+    singular: oberonlab
+    openAPISchema: '{"$schema":"http://json-schema.org/draft-07/schema#","title":"oberon-lab","type":"object","additionalProperties":false,"properties":{"web":{"type":"boolean"},"replicas":{"type":"integer","minimum":0},"host":{"type":"string"},"ingressClassName":{"type":"string"},"runner":{"type":"boolean"},"task":{"type":"string","enum":["isa","compiler","check"]},"patch":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["path","content"],"properties":{"path":{"type":"string","pattern":"^[A-Za-z0-9_./-]+$"},"content":{"type":"string"}}}},"images":{"type":"object","additionalProperties":false,"required":["web","runner"],"properties":{"web":{"type":"string"},"runner":{"type":"string"}}},"runnerResources":{"type":"object","additionalProperties":false,"required":["cpu","memory"],"properties":{"cpu":{"type":"string"},"memory":{"type":"string"}}}}}'
+  release:
+    prefix: oberon-lab-
+    labels:
+      sharding.fluxcd.io/key: tenants
+    chartRef:
+      kind: ExternalArtifact
+      name: forgotten-systems-machines-default-oberon-lab
+      namespace: cozy-system
+  dashboard:
+    singular: Oberon Lab
+    plural: Oberon Labs
+    category: Forgotten Systems
+    description: Оберон на настоящем Verilog Вирта — девять лабораторных и методичка
+    tags:
+    - education
+    - emulation
+    - retrocomputing
+    - machine
+    keysOrder:
+    - - apiVersion
+    - - kind
+    - - metadata
+    - - metadata
+      - name
+    - - spec
+      - web
+    - - spec
+      - replicas
+    - - spec
+      - host
+    - - spec
+      - runner
+    - - spec
+      - task
+    - - spec
+      - patch
+    icon: PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij4KICA8cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHJ4PSI4IiBmaWxsPSIjMWExYTFhIi8+CiAgPHJlY3QgeD0iMTAiIHk9IjEyIiB3aWR0aD0iNDQiIGhlaWdodD0iOCIgZmlsbD0iI2U2ZTZlNiIvPgogIDxyZWN0IHg9IjEwIiB5PSIyNCIgd2lkdGg9IjI2IiBoZWlnaHQ9IjMiIGZpbGw9IiM4YThhOGEiLz4KICA8cmVjdCB4PSIxMCIgeT0iMzEiIHdpZHRoPSIzNCIgaGVpZ2h0PSIzIiBmaWxsPSIjOGE4YThhIi8+CiAgPHJlY3QgeD0iMTAiIHk9IjM4IiB3aWR0aD0iMjAiIGhlaWdodD0iMyIgZmlsbD0iIzhhOGE4YSIvPgogIDxyZWN0IHg9IjEwIiB5PSI0NSIgd2lkdGg9IjMwIiBoZWlnaHQ9IjMiIGZpbGw9IiM4YThhOGEiLz4KICA8cmVjdCB4PSI0NCIgeT0iNDQiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0iI2U2ZTZlNiIvPgo8L3N2Zz4K

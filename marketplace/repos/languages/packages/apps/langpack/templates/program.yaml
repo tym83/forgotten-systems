@@ -1,0 +1,16 @@
+{{- if .Values.program }}
+{{- if eq .Values.srcdir .Values.workdir }}
+{{- fail "langpack: srcdir и workdir совпадают — исходники только на чтение, они закроют рабочий каталог" }}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-program
+  labels: {{- include "langpack.labels" . | nindent 4 }}
+# Текст программы кодируется через toJson: он многострочный и произвольный,
+# а литеральный блок YAML развалил бы его по отступам.
+data:
+  {{- range $f := .Values.program }}
+  {{ $f.path }}: {{ $f.content | toJson }}
+  {{- end }}
+{{- end }}

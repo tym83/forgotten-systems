@@ -1,0 +1,19 @@
+{{- if not .Values.image }}
+{{- if not .Values.pages }}
+{{- fail "handbook: нужен либо image с собранной документацией, либо непустой список pages" }}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-pages
+  labels: {{- include "handbook.labels" . | nindent 4 }}
+# ⚠ Страницы кодируются через toJson, а не литеральным блоком YAML: текст
+# страницы многострочный и произвольный, и в блоке `|` он разъехался бы по
+# отступам — каждая его строка попала бы в YAML на своём уровне. JSON —
+# подмножество YAML, поэтому так значение переживает любой текст.
+data:
+  index.html: {{ include "handbook.indexHtml" . | toJson }}
+  {{- range $page := .Values.pages }}
+  {{ $page.name }}.html: {{ include "handbook.pageHtml" (dict "page" $page "root" $) | toJson }}
+  {{- end }}
+{{- end }}

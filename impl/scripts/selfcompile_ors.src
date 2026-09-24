@@ -1,0 +1,8 @@
+at 12000000
+click 700 600 L                  # курсор в конец текста System.Tool
+type ORP.Compile ORS.Mod/s ~
+wait 1000000
+shot build/sc_typed.pbm
+click 690 569 M                  # исполнить набранную команду
+wait 40000000
+shot build/sc_done.pbm

@@ -1,0 +1,342 @@
+// Лаборатории. Каждая описывает шаги и МАШИННУЮ проверку — лаборатория без
+// проверки это демонстрация, а не задание.
+//
+// Уровни из плана серии: смотреть / менять / ломать / измерять / строить.
+// Здесь первые три; каждая опирается на то, что уже доказано в impl/docs.
+
+import { OberonFS, parseRsc, readText } from './oberonfs.js';
+
+const BOOT_CRC = 0xB5DFC933;          // та же сумма, что у make boot
+
+// Служебная запись файла меняется при каждой перезаписи: Files.Register
+// заводит новый файл и подменяет запись в каталоге. Это честный признак
+// «файл пересобран», не зависящий от того, совпало ли содержимое, — а
+// побайтовое сравнение эти два случая не различает.
+const hdr = (m, name) => new OberonFS(m).files().get(name);
+const rsc = (m, name) => {
+  const F = new OberonFS(m), h = F.files().get(name);
+  return h ? parseRsc(F.read(h)) : null;
+};
+const near = (a, b, eps) => Math.abs(a - b) <= eps;
+const text = (m, name) => {
+  const F = new OberonFS(m), h = F.files().get(name);
+  return h ? readText(F.read(h)) : null;
+};
+
+const ALL = [
+{
+  id: 1, level: 'смотреть',
+  title: 'Система на настоящем железе',
+  read: [['04-sistema.html', 'Система: текст вместо кнопок'],
+         ['01-zachem.html', 'Что здесь настоящее']],
+  intro: `Под канвой работает не эмулятор, а <b>RISC5.v</b> Никлауса Вирта —
+    тот самый Verilog, прогоняемый такт за тактом. Всё, что вы видите,
+    нарисовано системой Оберон 1986 года на этом процессоре.`,
+  steps: [
+    { text: 'Дайте системе загрузиться. Появится рабочий стол с двумя окнами: журнал сверху и <code>System.Tool</code> снизу.',
+      check: m => m.fbCrc() === BOOT_CRC
+        ? { ok: true, msg: `экран совпал с эталоном ${BOOT_CRC.toString(16).toUpperCase()}` }
+        : { ok: false, msg: `ещё не догрузилось (сумма экрана ${m.fbCrc().toString(16).toUpperCase()}, инструкций ${(m.insns/1e6).toFixed(1)} млн)` } },
+    { text: 'Команда в Обероне запускается <b>средним</b> щелчком по её тексту (Alt+левая, если средней нет). Щёлкните по <code>System.ShowModules</code>.',
+      check: m => {
+        const n = m.ink(655, 530, 1015, 700);       // полоса, где открывается вьюер
+        return n > 2000
+          ? { ok: true, msg: `вьюер модулей открыт (${n} точек текста в нижней полосе)` }
+          : { ok: false, msg: `в нижней полосе ${n} точек — вьюера пока нет` };
+      } },
+  ],
+  hint: 'Средний щелчок — Alt и левая кнопка. Щёлкать надо ровно по словам команды.',
+},
+{
+  id: 4, level: 'ломать',
+  title: 'Защиты памяти здесь нет',
+  read: [['02-mashina.html', 'Машина: RISC5'],
+         ['06-kompilyator.html', 'Ловушки и проверки']],
+  intro: `В этой машине нет ни блока управления памятью, ни колец защиты, ни
+    разделения привилегий. Любое слово ОЗУ доступно любому коду. Панель справа
+    пишет прямо в память машины — ровно то, что сделала бы любая ошибка
+    в указателе. Кнопка «Откатить» возвращает и машину, и образ диска.`,
+  tools: 'poke',
+  steps: [
+    { text: 'Дождитесь загрузки и впишите мусор в кадровый буфер: адрес <code>E7F00</code>, значение <code>FFFFFFFF</code>. Экран испортится, а система уцелеет — потому что портить экран ей не запрещено.',
+      check: m => {
+        if (m.insns < 12e6) return { ok: false, msg: 'система ещё не загрузилась' };
+        if (m.fbCrc() === BOOT_CRC) return { ok: false, msg: 'экран пока не изменился' };
+        const pcs = new Set(); for (let i = 0; i < 5; i++) { m.run(50000); pcs.add(m.pc); }
+        return pcs.size > 1
+          ? { ok: true, msg: 'экран испорчен, машина продолжает работать' }
+          : { ok: false, msg: 'машина встала — это уже следующий шаг' };
+      } },
+    { text: 'Теперь испортите <b>код</b>. В панели показан текущий счётчик команд — впишите по этому адресу значение <code>E7FFFFFF</code>. Это «переход на самого себя»: машина встанет насмерть, без ловушки и без сообщения.',
+      check: m => {
+        const pcs = new Set(); for (let i = 0; i < 5; i++) { m.run(50000); pcs.add(m.pc); }
+        return pcs.size === 1
+          ? { ok: true, msg: `машина встала: счётчик команд замер на ${[...pcs][0].toString(16).toUpperCase()}` }
+          : { ok: false, msg: `машина жива, счётчик команд гуляет (${pcs.size} разных значений)` };
+      } },
+  ],
+  hint: 'Адреса шестнадцатеричные, без 0x. Счётчик команд всё время меняется — впишите по тому значению, что видите в момент записи, и повторите, если не попали.',
+},
+{
+  id: 7, level: 'строить',
+  title: 'Система пересобирает сама себя',
+  read: [['07-samoraskrutka.html', 'Самораскрутка и неподвижная точка'],
+         ['05-moduli.html', 'Модули, символьные файлы и ключи']],
+  intro: `Компилятор Оберона написан на Обероне и лежит на этом же диске.
+    Здесь вы пересоберёте модуль <code>Math</code> и обнаружите, что
+    поставляемый двоичный файл на образе <b>устарел</b>: он собран другой
+    версией компилятора, чем та, что лежит рядом.`,
+  steps: [
+    { text: 'Дождитесь загрузки. Запомните размер файла <code>Math.rsc</code> — проверка покажет его ниже.',
+      check: m => {
+        const fs = new OberonFS(m), f = fs.files().get('Math.rsc');
+        if (!f) return { ok: false, msg: 'диск ещё не читается' };
+        const n = fs.length(f);
+        return n === 1877
+          ? { ok: true, msg: `Math.rsc на образе: ${n} байт — это поставляемый файл` }
+          : { ok: false, msg: `Math.rsc: ${n} байт (ожидалось 1877 до пересборки)` };
+      } },
+    { text: 'Поставьте курсор в конец текста <code>System.Tool</code> (левый щелчок), наберите <code>ORP.Compile Math.Mod/s ~</code> и запустите средним щелчком по набранному.',
+      check: m => {
+        const fs = new OberonFS(m), f = fs.files().get('Math.rsc');
+        if (!f) return { ok: false, msg: 'диск не читается' };
+        const n = fs.length(f);
+        return n === 1869
+          ? { ok: true, msg: `Math.rsc пересобран: ${n} байт вместо 1877. Поставляемый файл содержал 449 слов кода, свежий — 447, при том же ключе 32C32F12.` }
+          : { ok: false, msg: `Math.rsc сейчас ${n} байт; после пересборки должно стать 1869` };
+      } },
+  ],
+  hint: 'Тильда в конце обязательна: она закрывает список параметров команды.',
+},
+{
+  id: 5, level: 'измерять',
+  title: 'Сколько тактов на инструкцию',
+  read: [['02-mashina.html', 'Машина: RISC5'],
+         ['08-izmereno.html', 'Что мы измерили']],
+  intro: `У этой машины нет кэша, нет предсказания переходов и нет
+    внеочередного исполнения. Значит время исполнения считается по таблице и
+    не зависит от того, чем машина занята. Здесь вы проверите это сами —
+    счётчики инструкций и тактов показаны в заголовке страницы.`,
+  steps: [
+    { text: 'Дождитесь загрузки и нажмите «Проверить» — это запомнит текущие показания счётчиков.',
+      check: (m, c) => {
+        if (m.insns < 12e6) return { ok: false, msg: 'система ещё не загрузилась' };
+        c.state.i0 = m.insns; c.state.c0 = m.cycles;
+        return { ok: true, msg: `отсчёт: ${(m.insns/1e6).toFixed(1)} млн инструкций, ${(m.cycles/1e6).toFixed(1)} млн тактов` };
+      } },
+    { text: 'Разделите такты на инструкции за весь прогон и введите результат с двумя знаками.',
+      answer: 'например 1.55',
+      check: (m, c) => {
+        const real = m.cycles / m.insns, got = parseFloat((c.answer || '').replace(',', '.'));
+        if (!isFinite(got)) return { ok: false, msg: 'введите число' };
+        return near(got, real, 0.05)
+          ? { ok: true, msg: `верно: ${real.toFixed(3)} такта на инструкцию` }
+          : { ok: false, msg: `сейчас получается ${real.toFixed(3)}, а введено ${got}` };
+      } },
+    { text: 'Теперь поставьте курсор в конец текста <code>System.Tool</code>, наберите <code>ORP.Compile Math.Mod/s ~</code> и запустите. Затем введите, сколько тактов на инструкцию пришлось на этот отрезок.',
+      answer: 'например 1.54',
+      check: (m, c) => {
+        if (c.state.i0 === undefined) return { ok: false, msg: 'сначала шаг 1' };
+        const di = m.insns - c.state.i0, dc = m.cycles - c.state.c0;
+        if (di < 20e6) return { ok: false, msg: `на отрезке всего ${(di/1e6).toFixed(1)} млн инструкций — компиляция ещё не прошла` };
+        const real = dc / di, got = parseFloat((c.answer || '').replace(',', '.'));
+        if (!isFinite(got)) return { ok: false, msg: 'введите число' };
+        return near(got, real, 0.06)
+          ? { ok: true, msg: `верно: ${real.toFixed(3)}. Столько же, сколько на холостом ходу и при загрузке — машине всё равно, чем заниматься.` }
+          : { ok: false, msg: `на отрезке получается ${real.toFixed(3)}, а введено ${got}` };
+      } },
+  ],
+  hint: 'Счётчики в заголовке обновляются четыре раза в секунду. Разделить одно на другое можно в уме: обе величины показаны в миллионах.',
+},
+{
+  id: 6, level: 'ломать',
+  title: 'Куча кончается внутри команды',
+  read: [['04-sistema.html', 'Система: текст вместо кнопок'],
+         ['06-kompilyator.html', 'Компилятор изнутри']],
+  intro: `Сборщик мусора в Обероне работает <b>между</b> командами, а не внутри
+    них. Пока команда выполняется, память только расходуется. Здесь вы
+    наткнётесь на это сами — и найдёте обход.`,
+  steps: [
+    { text: 'Поставьте курсор в конец <code>System.Tool</code> и запустите одной командой: <code>ORP.Compile ORS.Mod/s ORB.Mod/s ORG.Mod/s ORP.Mod/s PIO.Mod/s ~</code>. В журнале появится <code>TRAP 4</code> — разыменование NIL, то есть память кончилась. Файл <code>PIO.rsc</code> так и не появится.',
+      check: m => {
+        if (m.insns < 120e6) return { ok: false, msg: 'команда ещё не отработала' };
+        return hdr(m, 'PIO.rsc') === undefined
+          ? { ok: true, msg: 'PIO.rsc на диске нет — пачка не дошла до последнего модуля' }
+          : { ok: false, msg: 'PIO.rsc уже есть: похоже, вы собрали его отдельной командой' };
+      } },
+    { text: 'Теперь то же самое, но по одному модулю за команду. Достаточно последнего: <code>ORP.Compile PIO.Mod/s ~</code>.',
+      check: m => hdr(m, 'PIO.rsc') !== undefined
+        ? { ok: true, msg: `PIO.rsc создан, ${rsc(m, 'PIO.rsc').codeWords} слов кода. Та же работа, но между командами отработал сборщик мусора.` }
+        : { ok: false, msg: 'PIO.rsc пока нет' } },
+  ],
+  hint: 'На образе PIO.rsc отсутствует изначально — поэтому его появление и есть доказательство, что компиляция дошла до конца.',
+},
+{
+  id: 8, level: 'смотреть',
+  title: 'Неподвижная точка: два поколения',
+  read: [['07-samoraskrutka.html', 'Самораскрутка и неподвижная точка'],
+         ['05-moduli.html', 'Модули и ключи']],
+  intro: `«Компилятор собирает сам себя» само по себе ничего не доказывает:
+    компилятор с ошибкой тоже соберёт себя. Доказательство — совпадение двух
+    поколений. Здесь вы получите его руками.`,
+  steps: [
+    { text: 'Соберите сканер компилятора: <code>ORP.Compile ORS.Mod/s ~</code>. Это поколение 1 — его собрал компилятор, лежавший на диске.',
+      check: (m, c) => {
+        const h = hdr(m, 'ORS.rsc'), r = rsc(m, 'ORS.rsc');
+        if (!h) return { ok: false, msg: 'ORS.rsc не читается' };
+        if (c.state.h1 === undefined) {
+          if (h === 12383) return { ok: false, msg: 'ORS.rsc ещё не пересобран (служебная запись прежняя)' };
+          c.state.h1 = h; c.state.key = r.key; c.state.words = r.codeWords;
+        }
+        return { ok: true, msg: `поколение 1: ${r.codeWords} слов кода, ключ ${r.key.toString(16).toUpperCase()}` };
+      } },
+    { text: 'Выгрузите компилятор из памяти: <code>System.Free ORP ORG ORB ORS ~</code>. Без этого следующая сборка пойдёт старым кодом, оставшимся в памяти, и опыт потеряет смысл.',
+      check: (m, c) => c.state.h1 !== undefined
+        ? { ok: true, msg: 'дальше компилятор будет загружен с диска заново' }
+        : { ok: false, msg: 'сначала шаг 1' } },
+    { text: 'Соберите <code>ORS.Mod</code> ещё раз. Теперь это делает свежесобранный компилятор — поколение 2.',
+      check: (m, c) => {
+        if (c.state.h1 === undefined) return { ok: false, msg: 'сначала шаг 1' };
+        const h = hdr(m, 'ORS.rsc'), r = rsc(m, 'ORS.rsc');
+        if (h === c.state.h1) return { ok: false, msg: 'ORS.rsc не пересобирался: служебная запись та же' };
+        return (r.codeWords === c.state.words && r.key === c.state.key)
+          ? { ok: true, msg: `поколения совпали: ${r.codeWords} слов, ключ ${r.key.toString(16).toUpperCase()}. Разный двоичный код на входе — одинаковый результат на выходе.` }
+          : { ok: false, msg: `разошлись: было ${c.state.words} слов, стало ${r.codeWords}` };
+      } },
+  ],
+  hint: 'Все три команды можно набрать сразу тремя строками, а потом запускать по очереди средним щелчком.',
+},
+{
+  id: 2, level: 'смотреть',
+  title: 'Первый свой модуль',
+  read: [['03-yazyk.html', 'Язык: Оберон за одну главу'],
+         ['04-sistema.html', 'Система: текст вместо кнопок']],
+  intro: `Здесь вы наберёте модуль в редакторе системы, сохраните его и
+    скомпилируете. Ничего кроме мыши и клавиатуры не понадобится — редактор,
+    компилятор и файловая система уже внутри.`,
+  steps: [
+    { text: `Поставьте курсор в конец <code>System.Tool</code>, наберите
+      <code>Edit.Open Hello.Mod ~</code> и запустите. Слева откроется пустое
+      окно. Щёлкните в нём левой кнопкой и наберите:
+      <pre>MODULE Hello;
+  VAR n*: INTEGER;
+  PROCEDURE Add*(x: INTEGER);
+  BEGIN n := n + x
+  END Add;
+BEGIN n := 0
+END Hello.</pre>
+      Затем <code>Edit.Store</code> в заголовке этого окна.`,
+      check: m => {
+        const t = text(m, 'Hello.Mod');
+        if (t === null) return { ok: false, msg: 'файла Hello.Mod на диске нет' };
+        const need = ['MODULE Hello', 'VAR n*', 'PROCEDURE Add*', 'END Hello.'];
+        const lost = need.filter(x => !t.includes(x));
+        return lost.length === 0
+          ? { ok: true, msg: `Hello.Mod сохранён, ${t.length} символов` }
+          : { ok: false, msg: `в тексте не хватает: ${lost.join(', ')}` };
+      } },
+    { text: 'Теперь скомпилируйте его: <code>ORP.Compile Hello.Mod ~</code>.',
+      check: m => {
+        const r = rsc(m, 'Hello.rsc');
+        return r
+          ? { ok: true, msg: `Hello.rsc создан: ${r.codeWords} слов кода, ключ ${r.key.toString(16).toUpperCase()}` }
+          : { ok: false, msg: 'Hello.rsc пока нет — компиляция не прошла' };
+      } },
+  ],
+  hint: 'Звёздочка после имени означает экспорт. Точка после последнего END обязательна. Если компилятор ругается, он печатает позицию в символах от начала файла.',
+},
+{
+  id: 3, level: 'менять',
+  title: 'Ключ интерфейса',
+  read: [['05-moduli.html', 'Модули, символьные файлы и ключи']],
+  intro: `Заголовочных файлов в Обероне нет: интерфейс модуля компилятор
+    извлекает сам и подсчитывает по нему <b>ключ</b>. Каждый модуль помнит
+    ключи всех, кого импортирует, и система сверяет их при загрузке. Здесь вы
+    увидите этот механизм целиком, ничего не набирая.`,
+  steps: [
+    { text: 'Посмотрим на готовый модуль. Нажмите «Проверить» — будет показан ключ <code>Blink.rsc</code>, лежащего на образе.',
+      check: (m, c) => {
+        const r = rsc(m, 'Blink.rsc');
+        if (!r) return { ok: false, msg: 'система ещё не загрузилась' };
+        c.state.key = r.key;
+        return { ok: true, msg: `Blink.rsc: ключ ${r.key.toString(16).toUpperCase().padStart(8,'0')}, ${r.codeWords} слов кода` };
+      } },
+    { text: 'Пересоберите его: <code>ORP.Compile Blink.Mod/s ~</code>. Исходник не менялся, значит интерфейс тот же — и ключ обязан остаться прежним, хотя файл будет перезаписан.',
+      check: (m, c) => {
+        if (c.state.key === undefined) return { ok: false, msg: 'сначала шаг 1' };
+        const h = hdr(m, 'Blink.rsc'), r = rsc(m, 'Blink.rsc');
+        if (h === 22417) return { ok: false, msg: "Blink.rsc ещё не пересобирался" };
+        return r.key === c.state.key
+          ? { ok: true, msg: `файл перезаписан, ключ прежний: ${r.key.toString(16).toUpperCase()}` }
+          : { ok: false, msg: `ключ изменился: было ${c.state.key.toString(16).toUpperCase()}, стало ${r.key.toString(16).toUpperCase()}` };
+      } },
+    { text: `А теперь — зачем всё это. Каждый модуль хранит ключи тех, кого
+      импортирует. Нажмите «Проверить»: сверим ключ, который <code>Oberon.rsc</code>
+      помнит для <code>Texts</code>, с собственным ключом <code>Texts.rsc</code>.`,
+      check: m => {
+        const o = rsc(m, 'Oberon.rsc'), t = rsc(m, 'Texts.rsc');
+        if (!o || !t) return { ok: false, msg: 'файлы не читаются' };
+        const rec = (o.imports.find(([n]) => n === 'Texts') || [])[1];
+        if (rec === undefined) return { ok: false, msg: 'Oberon не импортирует Texts?' };
+        return rec === t.key
+          ? { ok: true, msg: `совпало: Oberon помнит ${rec.toString(16).toUpperCase().padStart(8,'0')}, и это ключ Texts. Разойдись они — модуль просто не загрузится.` }
+          : { ok: false, msg: `расхождение: ${rec.toString(16).toUpperCase()} против ${t.key.toString(16).toUpperCase()}` };
+      } },
+  ],
+  hint: 'Ключ считается по интерфейсу, а не по коду: правка тела процедуры его не меняет, добавление экспортированного имени — меняет.',
+},
+{
+  id: 9, level: 'менять',
+  title: 'Внутри кодогенератора',
+  read: [['06-kompilyator.html', 'Компилятор изнутри'],
+         ['08-izmereno.html', 'Что мы измерили']],
+  intro: `Перед каждым индексированием по переменному индексу кодогенератор
+    вставляет две команды: сравнение и условный переход. Управляет этим одна
+    переменная <code>check</code> в <code>ORG.Mod</code>, а включается она
+    неожиданным образом — звёздочкой после слова <code>MODULE</code>.`,
+  steps: [
+    { text: `Создайте <code>Edit.Open Idx.Mod ~</code> и наберите (слово
+      <code>MODULE</code> — отдельной строкой, это понадобится дальше):
+      <pre>MODULE
+Idx;
+  VAR a: ARRAY 100 OF INTEGER;
+  PROCEDURE Sum*(n: INTEGER): INTEGER;
+    VAR i, s: INTEGER;
+  BEGIN s := 0; i := 0;
+    WHILE i &lt; n DO s := s + a[i]; INC(i) END;
+    RETURN s
+  END Sum;
+END Idx.</pre>
+      Сохраните и соберите: <code>ORP.Compile Idx.Mod/s ~</code>.`,
+      check: (m, c) => {
+        const r = rsc(m, 'Idx.rsc');
+        if (!r) return { ok: false, msg: 'Idx.rsc пока нет' };
+        if (r.version !== 1) return { ok: false, msg: 'версия не 1 — звёздочка уже стоит?' };
+        c.state.words = r.codeWords;
+        return { ok: true, msg: `Idx.rsc: ${r.codeWords} слов кода, версия ${r.version}` };
+      } },
+    { text: `Теперь поставьте курсор в самое начало второй строки, перед
+      <code>Idx;</code>, и наберите звёздочку. Получится <code>MODULE *Idx;</code>.
+      Сохраните и соберите снова.`,
+      check: (m, c) => {
+        if (c.state.words === undefined) return { ok: false, msg: 'сначала шаг 1' };
+        const t = text(m, 'Idx.Mod'), r = rsc(m, 'Idx.rsc');
+        if (!t || !t.includes('*Idx')) return { ok: false, msg: 'звёздочки перед именем модуля нет' };
+        if (r.version !== 0)
+          return { ok: false, msg: `версия объектного файла всё ещё ${r.version} — пересоберите` };
+        const d = r.codeWords - c.state.words;
+        const sl = n => (n % 10 === 1 && n % 100 !== 11) ? 'слово'
+          : ([2,3,4].includes(n % 10) && ![12,13,14].includes(n % 100)) ? 'слова' : 'слов';
+        return { ok: true, msg: `версия стала 0: проверки границ больше не порождаются. `
+          + `Но кода стало ${r.codeWords} вместо ${c.state.words} — на ${d} ${sl(d)} БОЛЬШЕ. `
+          + `Звёздочка включает режим RISC-0 целиком, а он резервирует восемь слов в начале модуля. `
+          + `Два эффекта сразу — поэтому цену проверок так не измерить.` };
+      } },
+  ],
+  hint: 'Щёлкать надо левее первого символа второй строки, но внутри рамки окна. Если звёздочка попала внутрь слова, компилятор скажет «must start with MODULE».',
+},
+];
+
+// Порядок в интерфейсе — по номеру из программы курса, а не по времени
+// написания.
+export const LABS = ALL.sort((a, b) => a.id - b.id);

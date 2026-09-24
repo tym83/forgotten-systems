@@ -1,0 +1,13 @@
+name: forgotten-systems-images
+ociRef: oci://ghcr.io/REPLACE-ME/forgotten-systems-images
+version: v0.1.0
+description: Загрузочные образы машин для KubeVirt, включая образы с эмуляторами внутри
+homepage: https://github.com/REPLACE-ME/forgotten-systems
+maintainer: Forgotten Systems
+tags:
+  - image
+  - kubevirt
+  - privileged
+signing:
+  identity: REPLACE-ME
+  issuer: https://token.actions.githubusercontent.com

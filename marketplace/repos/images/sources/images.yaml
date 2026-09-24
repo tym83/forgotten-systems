@@ -1,0 +1,33 @@
+# Репозиторий «образы» — загрузочные образы машин для KubeVirt.
+#
+# Это единственный репозиторий каталога, которому нужно доверие уровня
+# кластера: он кладёт образы в общее пространство cozy-public, откуда их видят
+# все тенанты. Компонент помечен privileged, и валидатор Cozystack на этом
+# ругается предупреждением — так и задумано, оператор должен это увидеть.
+#
+# Про «новые архитектуры для KubeVirt». Список архитектур в KubeVirt закрыт:
+# в CRD ресурса KubeVirt поле architectureConfiguration имеет ровно четыре
+# ветки — amd64, arm64, ppc64le (объявлена устаревшей) и s390x. Добавить туда
+# пятую запись нельзя, не меняя саму KubeVirt. Поэтому архитектура, которой
+# никогда не существовало в кремнии, приезжает сюда не как архитектура
+# KubeVirt, а как загрузочный образ, внутри которого работает её эмулятор:
+# машина в кластере обычная, необычное — то, что она изображает.
+apiVersion: cozystack.io/v1alpha1
+kind: PackageSource
+metadata:
+  name: forgotten-systems.images
+spec:
+  sourceRef:
+    kind: OCIRepository
+    name: forgotten-systems-images
+    namespace: cozy-system
+    path: /
+  variants:
+    - name: default
+      components:
+        - name: machine-images
+          path: system/machine-images
+          install:
+            namespace: cozy-system
+            releaseName: forgotten-machine-images
+            privileged: true

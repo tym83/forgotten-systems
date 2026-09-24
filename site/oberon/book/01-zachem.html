@@ -1,0 +1,106 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Зачем это и что здесь настоящее</title>
+<style>
+:root { color-scheme: light dark; --bg:#f6f6f4; --fg:#1a1a1a; --mut:#666;
+        --line:#d8d8d4; --acc:#2b5fa8; --code:#eceae5; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#16181c; --fg:#e6e6e6; --mut:#9aa0a6; --line:#2e3238;
+          --acc:#7aa7e8; --code:#20242a; } }
+* { box-sizing:border-box }
+body { margin:0; background:var(--bg); color:var(--fg);
+       font:16px/1.65 ui-serif,Georgia,"Times New Roman",serif; }
+.wrap { display:grid; grid-template-columns:240px minmax(0,72ch); gap:40px;
+        max-width:1100px; margin:0 auto; padding:28px 20px 80px }
+@media (max-width:900px) { .wrap { grid-template-columns:1fr; gap:16px } }
+nav { position:sticky; top:20px; align-self:start;
+      font:13px/1.5 ui-sans-serif,system-ui,sans-serif }
+nav a { display:block; padding:3px 0; color:var(--mut); text-decoration:none }
+nav a:hover { color:var(--acc) }
+nav a.cur { color:var(--fg); font-weight:600 }
+nav .top { font-weight:600; color:var(--fg); margin-bottom:10px; display:block }
+h1 { font-size:26px; line-height:1.25; margin:0 0 24px }
+h2 { font-size:20px; margin:32px 0 10px }
+h3 { font-size:17px; margin:24px 0 8px }
+p, li { margin:0 0 12px }
+ul, ol { padding-left:24px }
+a { color:var(--acc) }
+code { font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+       background:var(--code); padding:1px 4px; border-radius:3px }
+pre { background:var(--code); padding:12px 14px; border-radius:7px;
+      overflow-x:auto; border:1px solid var(--line) }
+pre code { background:none; padding:0; font-size:12.5px }
+table { border-collapse:collapse; width:100%; font-size:14px; margin:0 0 16px;
+        display:block; overflow-x:auto }
+th, td { border:1px solid var(--line); padding:6px 9px; text-align:left }
+th { background:var(--code) }
+blockquote { margin:0 0 14px; padding:8px 14px; border-left:3px solid var(--line);
+             color:var(--mut) }
+.foot { margin-top:48px; padding-top:16px; border-top:1px solid var(--line);
+        display:flex; justify-content:space-between;
+        font:14px ui-sans-serif,system-ui,sans-serif }
+</style>
+<div class="wrap">
+<nav><a class="top" href="index.html">Оберон: методичка</a><a class="cur" href="01-zachem.html">Зачем это и что здесь настоящее</a><a class="" href="02-mashina.html">Машина: RISC5</a><a class="" href="03-yazyk.html">Язык: Оберон за одну главу</a><a class="" href="04-sistema.html">Система: текст вместо кнопок</a><a class="" href="05-moduli.html">Модули, символьные файлы и ключи</a><a class="" href="06-kompilyator.html">Компилятор изнутри</a><a class="" href="07-samoraskrutka.html">Самораскрутка и неподвижная точка</a><a class="" href="08-izmereno.html">Что мы измерили и что нашли</a>
+<a href="../lab.html" style="margin-top:14px">→ Лаборатории</a></nav>
+<article><h1>Зачем это и что здесь настоящее</h1>
+<p>Эта методичка — к набору лабораторных, в которых вы работаете с операционной
+системой 1986 года, запущенной на процессоре, описанном на Verilog. В браузере,
+без установки.</p>
+<p>Прежде чем разбираться, стоит договориться, что именно настоящее, а что
+имитация. В ретрокомпьютерных проектах это обычно размыто, и зря.</p>
+<h2>Что настоящее</h2>
+<p><strong>Процессор.</strong> Под страницей работает <code>RISC5.v</code> — синтезируемый Verilog
+Никлауса Вирта, прогоняемый такт за тактом симулятором Verilator. Это не модель
+процессора и не эмулятор: это тот самый код, который прошивается в ПЛИС. Когда
+вы видите на экране мигающий курсор, его рисует настоящая логика,
+просимулированная с точностью до такта.</p>
+<p><strong>Система.</strong> Project Oberon — операционная система, которую Вирт и Юрг Гуткнехт
+написали в 1986 году и переписали под собственный процессор в 2013-м. Вся она,
+вместе с компилятором, оконной средой и текстовым редактором, занимает около
+десяти тысяч строк.</p>
+<p><strong>Компилятор.</strong> Компилятор Оберона написан на Обероне и лежит на том же диске,
+что и всё остальное. В лабораторной №7 вы запустите его и он соберёт сам себя.</p>
+<h2>Что не настоящее</h2>
+<p><strong>Периферия.</strong> Диск, клавиатура и мышь смоделированы на C++ и JavaScript.
+Настоящая плата общается с SD-картой по SPI и с клавиатурой по PS/2; здесь эти
+протоколы воспроизведены программно. Процессор об этом не знает — он видит те же
+регистры по тем же адресам.</p>
+<p><strong>Скорость.</strong> Симуляция даёт около четырёх мегагерц эквивалента — примерно
+вчетверо медленнее настоящей платы. Загрузка занимает пару секунд.</p>
+<h2>Почему этому можно верить</h2>
+<p>Утверждать «у нас настоящий процессор» легко. Проверить трудно. Поэтому всё, что
+вы увидите, проверено машинно, и проверки лежат в том же репозитории:</p>
+<ul>
+<li><strong>Загрузка сверяется по контрольной сумме экрана.</strong> После двенадцати миллионов
+  инструкций кадровый буфер даёт <code>B5DFC933</code> — одинаково в нативной сборке, в
+  сборке с диском в памяти и в браузере.</li>
+<li><strong>Шаг в шаг с независимым эмулятором.</strong> Четырнадцать с половиной миллионов
+  инструкций сравниваются с эмулятором Петера де Вахта по всем регистрам,
+  флагам и содержимому памяти. Ни одного расхождения.</li>
+<li><strong>Компилятор приходит в неподвижную точку.</strong> Собранный им же компилятор
+  выдаёт те же размеры кода и те же ключи, бит в бит.</li>
+<li><strong>Вся система пересобирает себя.</strong> Тридцать семь объектных файлов после
+  пересборки совпадают с исходными побайтово.</li>
+</ul>
+<p>Последний пункт стоит того, чтобы задержаться. Он означает, что перед вами не
+музейный экспонат, а замкнутая система: описание процессора порождает
+процессор, процессор выполняет систему, система содержит компилятор, компилятор
+порождает саму систему. Круг сходится, и это проверяется одной командой.</p>
+<h2>Как читать дальше</h2>
+<p>Главы независимы настолько, насколько это возможно, но порядок не случаен:</p>
+<ul>
+<li><a href="02-mashina.html">Машина</a> — что такое RISC5: регистры, команды, память.</li>
+<li><a href="03-yazyk.html">Язык</a> — Оберон целиком, за одну главу. Он действительно
+  помещается.</li>
+<li><a href="04-sistema.html">Система</a> — самая непривычная часть: здесь нет кнопок, весь
+  интерфейс это текст, а команды запускаются средней кнопкой мыши.</li>
+<li><a href="05-moduli.html">Модули</a> — раздельная компиляция и символьные файлы.</li>
+<li><a href="06-kompilyator.html">Компилятор</a> — четыре модуля и путь от <code>a[i]</code> до команд.</li>
+<li><a href="07-samoraskrutka.html">Самораскрутка</a> — что доказывает неподвижная точка.</li>
+<li><a href="08-izmereno.html">Что мы измерили</a> — числа и находки, которых нет в книгах.</li>
+</ul>
+<p>Если хочется сразу потрогать — начинайте с лабораторной №1, она ничего не
+требует, кроме браузера.</p><div class="foot"><span></span><span><a href="02-mashina.html">Машина: RISC5 →</a></span></div></article>
+</div>

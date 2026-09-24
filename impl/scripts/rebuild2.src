@@ -1,0 +1,82 @@
+# Пересборка системы, сессия 2 из 2: 20 модулей в 11 командах.
+at 12000000
+click 700 620 L
+type ORP.Compile ORS.Mod/s ~
+enter
+type ORP.Compile TextFrames.Mod/s Tools.Mod/s Checkers.Mod/s ~
+enter
+type ORP.Compile Clipboard.Mod/s Edit.Mod/s GraphicFrames.Mod/s ~
+enter
+type ORP.Compile Hilbert.Mod/s MacroTool.Mod/s Net.Mod/s ~
+enter
+type ORP.Compile ORB.Mod/s ~
+enter
+type ORP.Compile ORG.Mod/s ~
+enter
+type ORP.Compile ORP.Mod/s ~
+enter
+type ORP.Compile ORTool.Mod/s Rectangles.Mod/s Sierpinski.Mod/s ~
+enter
+type ORP.Compile Stars.Mod/s ~
+enter
+type ORP.Compile System.Mod/s ~
+enter
+type ORP.Compile Curves.Mod/s Draw.Mod/s ~
+wait 3000000
+shot build/rb2_typed.pbm
+click 690 569 M      # ORS
+wait 25000000
+shot build/rb2_c00.pbm
+click 980 6 M
+wait 2000000
+click 690 581 M      # TextFrames Tools Checkers
+wait 57323559
+shot build/rb2_c01.pbm
+click 980 6 M
+wait 2000000
+click 690 593 M      # Clipboard Edit GraphicFrames
+wait 43234061
+shot build/rb2_c02.pbm
+click 980 6 M
+wait 2000000
+click 690 605 M      # Hilbert MacroTool Net
+wait 26095643
+shot build/rb2_c03.pbm
+click 980 6 M
+wait 2000000
+click 690 617 M      # ORB
+wait 25464369
+shot build/rb2_c04.pbm
+click 980 6 M
+wait 2000000
+click 690 629 M      # ORG
+wait 58796532
+shot build/rb2_c05.pbm
+click 980 6 M
+wait 2000000
+click 690 641 M      # ORP
+wait 62573729
+shot build/rb2_c06.pbm
+click 980 6 M
+wait 2000000
+click 690 653 M      # ORTool Rectangles Sierpinski
+wait 27174629
+shot build/rb2_c07.pbm
+click 980 6 M
+wait 2000000
+click 690 665 M      # Stars
+wait 25000000
+shot build/rb2_c08.pbm
+click 980 6 M
+wait 2000000
+click 690 677 M      # System
+wait 25000000
+shot build/rb2_c09.pbm
+click 980 6 M
+wait 2000000
+click 690 689 M      # Curves Draw
+wait 25000000
+shot build/rb2_c10.pbm
+click 980 6 M
+wait 2000000
+shot build/rb2_done.pbm

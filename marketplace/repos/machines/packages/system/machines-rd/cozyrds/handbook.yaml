@@ -1,0 +1,44 @@
+# Сгенерировано tools/gen-appdefs.py из appdefs.yaml и
+# apps/handbook/values.schema.json. Руками не править:
+# `make gen` перезапишет, `make check` поймает расхождение.
+apiVersion: cozystack.io/v1alpha1
+kind: ApplicationDefinition
+metadata:
+  name: handbook
+spec:
+  application:
+    kind: Handbook
+    plural: handbooks
+    singular: handbook
+    openAPISchema: '{"$schema":"http://json-schema.org/draft-07/schema#","title":"handbook","type":"object","additionalProperties":false,"properties":{"title":{"type":"string","minLength":1},"image":{"type":"string"},"baseImage":{"type":"string","minLength":1},"replicas":{"type":"integer","minimum":0},"host":{"type":"string"},"ingressClassName":{"type":"string"},"pages":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["name","title","body"],"properties":{"name":{"type":"string","pattern":"^[a-z0-9][a-z0-9-]*$"},"title":{"type":"string","minLength":1},"body":{"type":"string"}}}}}}'
+  release:
+    prefix: handbook-
+    labels:
+      sharding.fluxcd.io/key: tenants
+    chartRef:
+      kind: ExternalArtifact
+      name: forgotten-systems-machines-default-handbook
+      namespace: cozy-system
+  dashboard:
+    singular: Handbook
+    plural: Handbooks
+    category: Forgotten Systems
+    description: Документация, которая разворачивается рядом с приложением
+    tags:
+    - documentation
+    - education
+    keysOrder:
+    - - apiVersion
+    - - kind
+    - - metadata
+    - - metadata
+      - name
+    - - spec
+      - title
+    - - spec
+      - pages
+    - - spec
+      - image
+    - - spec
+      - host
+    icon: PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij4KICA8cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHJ4PSI4IiBmaWxsPSIjMWExYTFhIi8+CiAgPHBhdGggZD0iTTEyIDE0aDE4YTQgNCAwIDAgMSA0IDR2MzJhNCA0IDAgMCAwLTQtNEgxMnoiIGZpbGw9IiNlNmU2ZTYiLz4KICA8cGF0aCBkPSJNNTIgMTRIMzRhNCA0IDAgMCAwLTQgNHYzMmE0IDQgMCAwIDEgNC00aDE4eiIgZmlsbD0iIzhhOGE4YSIvPgogIDxyZWN0IHg9IjE2IiB5PSIyMiIgd2lkdGg9IjEyIiBoZWlnaHQ9IjIiIGZpbGw9IiM4YThhOGEiLz4KICA8cmVjdCB4PSIxNiIgeT0iMjgiIHdpZHRoPSIxMCIgaGVpZ2h0PSIyIiBmaWxsPSIjOGE4YThhIi8+CiAgPHJlY3QgeD0iMzYiIHk9IjIyIiB3aWR0aD0iMTIiIGhlaWdodD0iMiIgZmlsbD0iI2U2ZTZlNiIvPgogIDxyZWN0IHg9IjM2IiB5PSIyOCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjIiIGZpbGw9IiNlNmU2ZTYiLz4KPC9zdmc+Cg==

@@ -1,0 +1,44 @@
+## @param {bool} web=true - Serve the browser labs and the manual over HTTP.
+web: true
+
+## @param {int} replicas=1 - Number of web replicas.
+replicas: 1
+
+## @param {string} [host] - External hostname for the labs. Empty means no ingress.
+host: ""
+
+## @param {string} [ingressClassName] - Ingress class. Empty means the cluster default.
+ingressClassName: ""
+
+## @param {bool} runner=false - Run a host-side lab (CPU or compiler edit) as a batch job.
+runner: false
+
+## @param {string} task=isa - Which host-side lab to run: isa, compiler or check.
+## @x-cozystack-options {enum: [isa, compiler, check]}
+task: isa
+
+## @typedef {struct} PatchFile - One file of the learner's patch.
+## @field {string} path - Path inside the project tree, e.g. rtl/RISC5.v
+## @field {string} content - Full contents of the file.
+
+## @param {[]PatchFile} patch - Files laid over the project tree before the run.
+patch: []
+
+## @typedef {struct} Images - Container images.
+## @field {string} web - Static image with the labs and the manual.
+## @field {string} runner - Image with Verilator and the build toolchain.
+
+## @param {Images} images - Container images.
+images:
+  web: ghcr.io/REPLACE-ME/oberon-web:dev
+  runner: ghcr.io/REPLACE-ME/oberon-lab:dev
+
+## @typedef {struct} Resources - CPU and memory.
+## @field {string} cpu
+## @field {string} memory
+
+## @param {Resources} runnerResources - Resources for the batch job. Verilator is
+## single-threaded but hungry: a full run is about a billion simulated cycles.
+runnerResources:
+  cpu: "2"
+  memory: "2Gi"

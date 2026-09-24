@@ -1,0 +1,90 @@
+{{- if .Values.runner }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-patch
+  labels: {{- include "oberon-lab.labels" . | nindent 4 }}
+data:
+  # Пути в ключи ConfigMap не кладутся: там нельзя косые черты. Поэтому файлы
+  # нумеруются, а соответствие «ключ — путь» идёт отдельной описью. Кодировать
+  # путь в самом ключе (точки вместо черт) нельзя: в именах файлов точки тоже
+  # встречаются, и вложенные каталоги разъезжаются.
+  manifest: |
+    {{- range $i, $f := .Values.patch }}
+    f{{ $i }} {{ $f.path }}
+    {{- end }}
+  {{- range $i, $f := .Values.patch }}
+  f{{ $i }}: |
+{{ $f.content | indent 4 }}
+  {{- end }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-{{ .Values.task }}
+  labels: {{- include "oberon-lab.labels" . | nindent 4 }}
+spec:
+  backoffLimit: 0                 # вердикт лабораторной повторять бессмысленно
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels: {{- include "oberon-lab.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+      initContainers:
+        - name: unpack
+          image: {{ .Values.images.runner | quote }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              if [ -s /cm/manifest ]; then
+                while read key path; do
+                  [ -n "$key" ] || continue
+                  mkdir -p "/work/$(dirname "$path")"
+                  cp "/cm/$key" "/work/$path"
+                  echo "  подготовлено: $path"
+                done < /cm/manifest
+              else
+                echo "  правок нет — прогон на исходном дереве"
+              fi
+          volumeMounts:
+            - { name: cm,   mountPath: /cm }
+            - { name: work, mountPath: /work }
+        - name: tree
+          # Verilator и компилятор пишут в build/, поэтому дерево проекта
+          # копируется в том: корень образа остаётся только для чтения.
+          image: {{ .Values.images.runner | quote }}
+          command: ["/bin/sh", "-c", "cp -a /lab/. /tree/"]
+          volumeMounts:
+            - { name: tree, mountPath: /tree }
+      containers:
+        - name: lab
+          image: {{ .Values.images.runner | quote }}
+          args: [{{ .Values.task | quote }}]
+          workingDir: /lab
+          volumeMounts:
+            - { name: work, mountPath: /work, readOnly: true }
+            - { name: tree, mountPath: /lab }
+          resources:
+            requests:
+              cpu: {{ .Values.runnerResources.cpu | quote }}
+              memory: {{ .Values.runnerResources.memory | quote }}
+            limits:
+              cpu: {{ .Values.runnerResources.cpu | quote }}
+              memory: {{ .Values.runnerResources.memory | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+      volumes:
+        - name: cm
+          configMap: { name: {{ .Release.Name }}-patch }
+        - { name: work, emptyDir: {} }
+        - { name: tree, emptyDir: {} }
+{{- end }}
