@@ -11,6 +11,27 @@ import OberonRISC5 from './risc5.js';
 
 const W = 1024, H = 768;
 
+// Модификатор, дающий среднюю кнопку. Клавиша физически одна, но называется
+// по-разному: на маке на ней написано Option, и подсказка «Alt» там сбивает —
+// человек ищет несуществующую клавишу. Ctrl в этой роли не годится вообще:
+// macOS превращает Ctrl+щелчок в правую кнопку ещё до страницы.
+const MAC = (() => {
+  if (typeof navigator === 'undefined') return false;
+  const n = navigator;
+  return /Mac|iPhone|iPad|iPod/.test(
+    (n.userAgentData && n.userAgentData.platform) || n.platform || n.userAgent || '');
+})();
+
+export const ALT_LABEL = MAC ? '\u2325 Option' : 'Alt';
+
+/** Проставить подпись модификатора во все метки .k-alt внутри узла. */
+export function labelAltKeys(root) {
+  const r = root || (typeof document === 'undefined' ? null : document);
+  if (!r) return;
+  for (const el of r.querySelectorAll('.k-alt')) el.textContent = ALT_LABEL;
+}
+
+
 // Скан-коды PS/2, набор 2. Ровно те, что понимает Input.Mod.
 export const PS2 = {
   KeyA:0x1C,KeyB:0x32,KeyC:0x21,KeyD:0x23,KeyE:0x24,KeyF:0x2B,KeyG:0x34,KeyH:0x33,
@@ -180,11 +201,33 @@ export function attach(machine, canvas) {
   addEventListener('mouseup', e => { btn = btnsFrom(e); push(); });
   canvas.addEventListener('contextmenu', e => e.preventDefault());
   canvas.addEventListener('auxclick', e => e.preventDefault());
+
+  // ⚠ Обработчики висят на всём окне, а не на канве, и глушили КАЖДОЕ нажатие,
+  // код которого есть в таблице PS/2. Отсюда два следствия, найденных на живом
+  // сайте: не работало копирование (Cmd/Ctrl+C), и — хуже — нельзя было вписать
+  // адрес в поля лабораторной, то есть задание с записью в память не делалось
+  // вовсе. Проверки лабораторных этого не ловили: они дёргают машину напрямую,
+  // минуя DOM.
+  //
+  // Клавиатура уходит машине, только если человек не печатает в поле ввода и не
+  // держит системный модификатор. Оберону ни Cmd, ни Ctrl для ввода не нужны.
+  function typingElsewhere(e) {
+    const t = e.target;
+    if (!t) return false;
+    if (t.isContentEditable) return true;
+    const tag = t.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+  }
+  function keyGoesToBrowser(e) {
+    return e.metaKey || e.ctrlKey || typingElsewhere(e);
+  }
   addEventListener('keydown', e => {
+    if (keyGoesToBrowser(e)) return;
     const c = PS2[e.code]; if (c === undefined) return;
     e.preventDefault(); machine.key(c);
   });
   addEventListener('keyup', e => {
+    if (keyGoesToBrowser(e)) return;
     const c = PS2[e.code]; if (c === undefined) return;
     e.preventDefault(); machine.key(0xF0); machine.key(c);
   });

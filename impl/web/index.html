@@ -23,10 +23,10 @@
 <div id="wrap"><canvas id="scr" width="1024" height="768"></canvas></div>
 <div class="hint">
   Мышь: <span class="btn" id="b0"></span>левая
-  <span class="btn" id="b1"></span>средняя (<kbd>Alt</kbd>+левая)
+  <span class="btn" id="b1"></span>средняя (<kbd class="k-alt">Alt</kbd>+левая)
   <span class="btn" id="b2"></span>правая.
   Оболочка Оберона построена на межкнопочных щелчках — средняя кнопка исполняет текст.
-  <b>Alt+левая даёт среднюю вместо левой, а не вместе с ней</b>, поэтому настоящие
+  <b><kbd class="k-alt">Alt</kbd>+левая даёт среднюю вместо левой, а не вместе с ней</b>, поэтому настоящие
   межкнопочные щелчки доступны только на мыши с тремя физическими кнопками.
   Запись на диск идёт только в память вкладки и при перезагрузке страницы теряется.
   <kbd>Ctrl</kbd> не годится как модификатор: на macOS система превращает его в правую кнопку.
@@ -135,11 +135,33 @@ window.addEventListener('mouseup', e => { btn = btnsFrom(e); pushMouse(); });
 cv.addEventListener('contextmenu', e => e.preventDefault());
 cv.addEventListener('auxclick', e => e.preventDefault());
 
+
+// ⚠ Обработчики висят на всём окне, а не на канве, и глушили КАЖДОЕ нажатие,
+// код которого есть в таблице PS/2. Отсюда два следствия, найденных на живом
+// сайте: не работало копирование (Cmd/Ctrl+C), и — хуже — нельзя было вписать
+// адрес в поля лабораторной, то есть задание с записью в память не делалось
+// вовсе. Проверки лабораторных этого не ловили: они дёргают машину напрямую,
+// минуя DOM.
+//
+// Клавиатура уходит машине, только если человек не печатает в поле ввода и не
+// держит системный модификатор. Оберону ни Cmd, ни Ctrl для ввода не нужны.
+function typingElsewhere(e) {
+  const t = e.target;
+  if (!t) return false;
+  if (t.isContentEditable) return true;
+  const tag = t.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+}
+function keyGoesToBrowser(e) {
+  return e.metaKey || e.ctrlKey || typingElsewhere(e);
+}
 addEventListener('keydown', e => {
+  if (keyGoesToBrowser(e)) return;
   const c = PS2[e.code]; if (c === undefined) return;
   e.preventDefault(); M._soc_key(c);
 });
 addEventListener('keyup', e => {
+  if (keyGoesToBrowser(e)) return;
   const c = PS2[e.code]; if (c === undefined) return;
   e.preventDefault(); M._soc_key(0xF0); M._soc_key(c);
 });

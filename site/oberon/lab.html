@@ -72,7 +72,7 @@
 </main>
 
 <script type="module">
-import { Machine, attach } from './machine.js';
+import { Machine, attach, labelAltKeys, ALT_LABEL } from './machine.js';
 import { LABS } from './labs.js';
 
 const $ = id => document.getElementById(id);
@@ -98,6 +98,9 @@ function render() {
   $('intro').innerHTML = lab.intro;
   $('hint').innerHTML = '<b>Подсказка.</b> ' + lab.hint;
   $('toolbox').hidden = lab.tools !== 'poke';
+  // Подписи клавиши-модификатора зависят от системы, а разметка приходит
+  // строкой из labs.js — проставляем после каждой перерисовки.
+  labelAltKeys(document);
   $('read').innerHTML = (lab.read || [])
     .map(([f, t]) => `<a href="book/${f}">📖 ${t}</a>`).join(' · ');
   $('steps').innerHTML = '';
