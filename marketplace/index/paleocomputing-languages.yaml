@@ -1,6 +1,6 @@
 name: paleocomputing-languages
 ociRef: oci://ghcr.io/tym83/paleocomputing/languages
-version: v0.1.2
+version: v0.1.3
 description: Окружения для языков — постоянная среда или разовый прогон без простаивающих подов
 homepage: https://github.com/tym83/paleocomputing
 maintainer: tym83
