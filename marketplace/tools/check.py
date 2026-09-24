@@ -294,6 +294,36 @@ def check_langpack() -> None:
            "мутация: неизвестный режим отвергается схемой")
 
 
+# ─── 8. Схемы не должны закрывать корень ────────────────────────────────────
+def check_schema_roots() -> None:
+    print("\nСхемы значений")
+    # ⚠ Найдено на живом кластере, не здесь. cozystack-engine подмешивает в
+    # values приложения тенанта ключи _cluster и _namespace. Если корень схемы
+    # закрыт (additionalProperties: false), Helm отвергает значения целиком и
+    # приложение не разворачивается — при том что артефакт валиден, каталог
+    # подключается и описания встают. Ни один чарт платформы корень не
+    # закрывает; проверка держит это правило.
+    schemas = sorted(ROOT.glob("repos/*/packages/*/*/values.schema.json"))
+    report(len(schemas) >= 5, f"схем найдено: {len(schemas)}")
+    for s in schemas:
+        d = json.loads(s.read_text(encoding="utf-8"))
+        report(d.get("additionalProperties") is not False,
+               f"{s.parent.name}: корень схемы открыт для ключей движка")
+
+    # Мутация: закрыть корень — проверка обязана покраснеть.
+    victim = ROOT / "repos/machines/packages/apps/oberon-lab/values.schema.json"
+    original = victim.read_text(encoding="utf-8")
+    try:
+        d = json.loads(original)
+        d["additionalProperties"] = False
+        victim.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+        bad = json.loads(victim.read_text(encoding="utf-8"))
+        report(bad.get("additionalProperties") is False,
+               "мутация: закрытый корень отличим от открытого")
+    finally:
+        victim.write_text(original, encoding="utf-8")
+
+
 def main() -> None:
     print("Проверки каталога «Забытые системы»")
     check_index()
@@ -303,6 +333,7 @@ def main() -> None:
     check_handbook()
     check_images()
     check_langpack()
+    check_schema_roots()
     print(f"\nИтог: успешно {ok_count}, провалено {fail_count}")
     sys.exit(1 if fail_count else 0)
 

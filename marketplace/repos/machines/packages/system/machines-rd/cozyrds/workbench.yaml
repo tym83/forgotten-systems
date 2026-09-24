@@ -10,7 +10,7 @@ spec:
     kind: Workbench
     plural: workbenches
     singular: workbench
-    openAPISchema: '{"$schema":"http://json-schema.org/draft-07/schema#","title":"workbench","type":"object","additionalProperties":false,"properties":{"machine":{"type":"boolean"},"manual":{"type":"boolean"},"host":{"type":"string"},"manualHost":{"type":"string"},"ingressClassName":{"type":"string"},"artifactPrefix":{"type":"string","minLength":1},"artifactNamespace":{"type":"string","minLength":1},"manualSource":{"type":"object","additionalProperties":false,"required":["title","image"],"properties":{"title":{"type":"string","minLength":1},"image":{"type":"string"}}}}}'
+    openAPISchema: '{"$schema":"http://json-schema.org/draft-07/schema#","title":"workbench","type":"object","$comment":"Корень схемы НЕ закрыт намеренно: cozystack-engine подмешивает в values любого приложения тенанта свои ключи (_cluster, _namespace), и при additionalProperties:false Helm отвергает значения целиком — приложение не разворачивается. Ни один чарт платформы корень не закрывает. Вложенные объекты закрыты: туда движок ничего не кладёт.","properties":{"machine":{"type":"boolean"},"manual":{"type":"boolean"},"host":{"type":"string"},"manualHost":{"type":"string"},"ingressClassName":{"type":"string"},"artifactPrefix":{"type":"string","minLength":1},"artifactNamespace":{"type":"string","minLength":1},"manualSource":{"type":"object","additionalProperties":false,"required":["title","image"],"properties":{"title":{"type":"string","minLength":1},"image":{"type":"string"}}}}}'
   release:
     prefix: workbench-
     labels:

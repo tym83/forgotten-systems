@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "langpack",
   "type": "object",
-  "additionalProperties": false,
+  "$comment": "Корень схемы НЕ закрыт намеренно: cozystack-engine подмешивает в values любого приложения тенанта свои ключи (_cluster, _namespace), и при additionalProperties:false Helm отвергает значения целиком — приложение не разворачивается. Ни один чарт платформы корень не закрывает. Вложенные объекты закрыты: туда движок ничего не кладёт.",
   "required": ["language", "image", "mode"],
   "properties": {
     "language": { "type": "string", "minLength": 1 },
