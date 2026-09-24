@@ -1,10 +1,12 @@
 # Цель RISC5 для QEMU — своя сборка.
 QEMU_DECODETREE ?= /tmp/decodetree.py
 
-.PHONY: check decodetree help
+.PHONY: check decodetree help build diff
 
 help:
 	@echo "  make check   проверить декодер генератором самого QEMU"
+	@echo "  make build   собрать qemu-system-risc5 в контейнере"
+	@echo "  make diff    сверить QEMU с моделью, снятой с настоящего RTL"
 
 # Скачиваем генератор, если его нет: он маленький и лежит в дереве QEMU.
 $(QEMU_DECODETREE):
@@ -20,3 +22,23 @@ check: $(QEMU_DECODETREE)
 	@n=$$(grep -c 'trans_' /tmp/risc5-decode.c.inc); \
 	  test "$$n" -ge 5 && echo "  функций разбора: $$n (по одной на формат) ✅" \
 	  || { echo "  ❌ форматов меньше пяти"; exit 1; }
+
+# Сборка в контейнере: зависимости QEMU на машину разработчика не ставим.
+# QEMU_SRC — куда клонировать дерево, по умолчанию рядом, в .qemu-work.
+QEMU_SRC ?= ../.qemu-work
+QEMU_REF ?= master
+
+build:
+	@test -d $(QEMU_SRC) || git clone --depth 1 -b $(QEMU_REF) \
+	  https://gitlab.com/qemu-project/qemu.git $(QEMU_SRC)
+	@./graft.sh $(QEMU_SRC)
+	@docker build -q -f build/Containerfile -t qemu-build:risc5 . >/dev/null
+	@docker run --rm -v "$$(cd $(QEMU_SRC) && pwd):/src" qemu-build:risc5 \
+	  'cd /src && test -d build || ./configure --target-list=risc5-softmmu \
+	     --disable-docs --disable-tools --disable-guest-agent \
+	     --without-default-features >/dev/null; ninja -C build'
+	@echo "  собран: $(QEMU_SRC)/build/qemu-system-risc5"
+
+# Главная проверка цели: не «собралось», а «считает то же, что железо».
+diff:
+	@python3 test/compare.py $(abspath $(QEMU_SRC))

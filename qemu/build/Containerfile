@@ -1,0 +1,15 @@
+# Сборка цели RISC5 для QEMU.
+#
+# Зависимости живут здесь, а не на машине разработчика: настройка QEMU тянет
+# meson, ninja, glib и pixman, и ставить это хосту ради одной цели незачем.
+# Заодно сборка становится воспроизводимой — у всех одинаковая.
+FROM debian:trixie-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      git python3 python3-venv ninja-build meson pkg-config \
+      gcc libc6-dev libglib2.0-dev libpixman-1-dev \
+      zlib1g-dev flex bison ca-certificates make \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+ENTRYPOINT ["/bin/bash", "-c"]

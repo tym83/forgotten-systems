@@ -1,0 +1,4 @@
+config OBERON
+    bool
+    default y
+    depends on RISC5

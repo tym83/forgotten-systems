@@ -15,7 +15,9 @@
 #define QEMU_RISC5_CPU_H
 
 #include "cpu-qom.h"
-#include "exec/cpu-defs.h"
+#include "exec/cpu-common.h"
+#include "exec/cpu-interrupt.h"
+#include "system/memory.h"
 
 #define CPU_RESOLVING_TYPE TYPE_RISC5_CPU
 
@@ -89,6 +91,15 @@ static inline uint32_t risc5_read_nzcv(const CPURISC5State *env)
            RISC5_NZCV_TAG;
 }
 
-#include "exec/cpu-all.h"
+
+bool risc5_cpu_tlb_fill(CPUState *cs, vaddr address, int size,
+                        MMUAccessType access_type, int mmu_idx,
+                        bool probe, uintptr_t retaddr);
+void risc5_cpu_do_interrupt(CPUState *cs);
+bool risc5_cpu_exec_interrupt(CPUState *cs, int interrupt_request);
+hwaddr risc5_cpu_get_phys_addr_debug(CPUState *cs, vaddr addr);
+void risc5_cpu_tcg_init(void);
+void risc5_cpu_translate_code(CPUState *cs, TranslationBlock *tb,
+                              int *max_insns, vaddr pc, void *host_pc);
 
 #endif
