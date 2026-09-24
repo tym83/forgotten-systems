@@ -37,13 +37,25 @@
 
 Наша правка: счётчик тактов и трассировка для дифференциального стенда.
 
-## Чего здесь нет намеренно
+## Библиотека ячеек — Sky130 (SkyWater)
 
-**Библиотека ячеек Nangate45** (`impl/syn/lib/*.lib`) в репозиторий не входит.
-Её шапка прямо запрещает публикацию: *«provided pursuant to a License Agreement
-containing restrictions on its use»*, *«does not indicate actual or intended
-publication of this file»*.
+* `impl/syn/lib/sky130_fd_sc_hd__tt_025C_1v80.lib` — оценки площади и частоты
 
-Без неё работает всё, кроме `make syn` и `make fmax` — оценки площади и частоты.
-`make deps` про её отсутствие предупреждает. Если она у вас есть, положите её в
-`impl/syn/lib/`.
+Apache-2.0, берётся из
+[OpenROAD-flow-scripts](https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts).
+В репозиторий не кладётся из-за размера (12 МБ) — тянется целью `make lib`,
+которую вызывает и `make syn`.
+
+Это настоящий техпроцесс, на нём физически делают чипы.
+
+### Почему не Nangate45
+
+На ней мерилось раньше, и её шапка **прямо запрещает публикацию**: *«provided
+pursuant to a License Agreement containing restrictions on its use»*, *«does not
+indicate actual or intended publication of this file»*. Из-за этого синтез не
+работал из чистого клона.
+
+Смена техпроцесса меняет абсолютные числа (130 нм против 45 нм), но наши
+утверждения — относительные дельты, и они переход переживают: цена команды
+проверки границ по площади **+1.04 %** против +0.32…0.85 % на Nangate45.
+Порядок и знак те же.

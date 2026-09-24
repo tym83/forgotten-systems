@@ -63,7 +63,7 @@ deps:
 	  printf "  %-12s ✅ %s\n" "$$t" "$$($$t --version 2>&1 | head -1 | cut -c1-48)"; \
 	done
 	@command -v em++ >/dev/null && echo "  em++         ✅ (нужен только для make web)" || echo "  em++         ⚠ нет — make web не соберётся"
-	@test -f syn/lib/nangate45_typ.lib && echo "  Nangate45    ✅" || echo "  Nangate45    ⚠ нет — make syn/fmax не пойдут"
+	@test -f $(SKY130) && echo "  Sky130       ✅" || echo "  Sky130       ⚠ нет — возьмётся сама при make syn (12 МБ)"
 
 # Порождаемые тесты: держим их производными от генераторов, иначе .s может
 # отстать от модели и проверка тихо выродится в сверку с самой собой.
@@ -304,7 +304,17 @@ bootstrap: scripts/gen2_sep.txt
 	  --script=scripts/gen2_sep.txt | grep -E "инструкций|расхождений"
 	@python3 tools/check_bootstrap.py build/g2_gen2.pbm
 
-syn:
+# Библиотека ячеек Sky130 (Apache-2.0) — 12 МБ, тянется по требованию.
+# Прежняя Nangate45 распространению не подлежит, см. THIRD-PARTY.md.
+SKY130 := syn/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+SKY130_URL := https://raw.githubusercontent.com/The-OpenROAD-Project/OpenROAD-flow-scripts/master/flow/platforms/sky130hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+
+lib: $(SKY130)
+$(SKY130):
+	@mkdir -p syn/lib && curl -fsSL -o $@ $(SKY130_URL) \
+	  && echo "  библиотека ячеек Sky130 загружена ($$(du -h $@ | cut -f1))"
+
+syn: $(SKY130)
 	@python3 syn/sweep.py
 
 # ⚠ Патчи кодогенератора живут в patches/, а НЕ в build/ — иначе одна команда clean
