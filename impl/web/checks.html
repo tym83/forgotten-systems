@@ -1,0 +1,137 @@
+<!doctype html>
+<meta charset="utf-8">
+<title data-i18n-en="The cost of a bounds check">Цена проверки границ</title>
+<style>
+  body { margin:0 auto; max-width:900px; padding:24px 16px 60px;
+         background:#141414; color:#ddd; font:15px/1.6 system-ui,sans-serif }
+  h1 { font-size:21px; margin:0 0 6px }
+  h2 { font-size:16px; margin:28px 0 8px; color:#cfcfcf }
+  p  { color:#a8a8a8 }
+  code, kbd { font:12px/1.5 ui-monospace,Menlo,monospace; background:#1e1e1e;
+              border:1px solid #2e2e2e; border-radius:4px; padding:1px 5px }
+  pre { background:#1e1e1e; border:1px solid #2e2e2e; border-radius:8px; padding:12px 14px;
+        overflow:auto; font:12px/1.5 ui-monospace,Menlo,monospace; color:#cfcfcf }
+  .switch { display:flex; gap:0; margin:18px 0 6px; border:1px solid #3a3a3a;
+            border-radius:10px; overflow:hidden; width:max-content }
+  .switch button { font:14px/1 system-ui,sans-serif; background:#1b1b1b; color:#bbb;
+                   border:0; padding:12px 18px; cursor:pointer }
+  .switch button[aria-pressed="true"] { background:#2f4f43; color:#eafff5 }
+  table { border-collapse:collapse; margin:10px 0; font-size:14px }
+  th, td { border:1px solid #2e2e2e; padding:6px 12px; text-align:right }
+  th:first-child, td:first-child { text-align:left }
+  td.num { font:13px ui-monospace,Menlo,monospace }
+  .delta { color:#8fd6b4 }
+  button.run { font:inherit; background:#2b2b2b; color:#ddd; border:1px solid #444;
+               border-radius:6px; padding:8px 14px; cursor:pointer }
+  oberon-machine { display:block; box-shadow:0 0 0 1px #333; margin:14px 0 }
+  .note { font-size:13px; color:#7f7f7f }
+</style>
+
+<h1 data-i18n-en="The cost of a bounds check">Цена проверки границ</h1>
+<p data-i18n-en="Oberon checks every array index. The check is not free, and here you can switch the processor under it: the stock core, where the compiler emits a comparison and a conditional branch, and a core that has a bounds-check instruction in hardware. Same system, same program, two processors.">
+Оберон проверяет каждый индекс массива. Проверка не бесплатна — и здесь можно
+поменять под ней процессор: стоковое ядро, где компилятор эмитит сравнение и
+условный переход, и ядро, у которого проверка границ есть в железе. Та же
+система, та же программа, два процессора.</p>
+
+<h2 data-i18n-en="The processor">Процессор</h2>
+<div class="switch">
+  <button id="pick-base" aria-pressed="true" data-i18n-en="Stock core">Стоковое ядро</button>
+  <button id="pick-chk" aria-pressed="false" data-i18n-en="Core with CHK">Ядро с CHK</button>
+</div>
+<p class="note" id="what"></p>
+
+<h2 data-i18n-en="The same loop, two ways">Один и тот же цикл, двумя способами</h2>
+<pre id="asm"></pre>
+<button class="run" id="measure" data-i18n-en="Measure">Замерить</button>
+<span class="note" id="state"></span>
+
+<table id="tbl" hidden>
+  <thead><tr>
+    <th data-i18n-en="Configuration">Конфигурация</th>
+    <th data-i18n-en="Instructions / index">Команд на индексацию</th>
+    <th data-i18n-en="Cycles / index">Тактов на индексацию</th>
+  </tr></thead>
+  <tbody></tbody>
+</table>
+
+<h2 data-i18n-en="And the system boots on both">И система грузится на обоих</h2>
+<p data-i18n-en="The switch above changes the machine below. The stock system boots identically on both cores — the screen matches bit for bit (checked automatically: worker-test.mjs). An extension of the instruction set that changes the behaviour of existing code is not an extension, it is a different machine.">
+Переключатель выше меняет машину ниже. Стоковая система грузится на обоих ядрах
+одинаково — экран совпадает побитово (проверяется автоматически, `worker-test.mjs`).
+Расширение системы команд, которое меняет поведение старого кода, — не
+расширение, а другая машина.</p>
+
+<oberon-machine id="m" variant="base"></oberon-machine>
+
+<script type="module">
+import { LANG, t, applyMarkup } from './i18n.js';
+import './embed.js';
+applyMarkup(document);
+if (LANG === 'ru') document.getElementById('m').setAttribute('start-label', 'Запустить машину');
+
+const WHAT = {
+  base: { en: 'Stock core: the compiler emits SUB + BCC before every indexing — two instructions.',
+          ru: 'Стоковое ядро: перед каждой индексацией компилятор эмитит SUB + BCC — две команды.' },
+  chk:  { en: 'Core with CHK: the same check is one instruction, and it traps exactly like BLR does.',
+          ru: 'Ядро с CHK: та же проверка одной командой, а ловушка срабатывает ровно как у BLR.' },
+};
+// Комментарии в листинге — на языке страницы: сам листинг одинаковый.
+const ASM = variant => {
+  const c1 = t({ en: 'compare, for the flags', ru: 'сравнение ради флагов' });
+  const c2 = t({ en: 'i >= lim -> trap', ru: 'i >= lim -> ловушка' });
+  const c3 = t({ en: 'the same check, one instruction', ru: 'та же проверка одной командой' });
+  const tailLines = ['        LSL  R10, R1, 2', '        ADD  R10, R2, R10',
+                     '        LD   R3, R10, 0', '        ...'].join('\n');
+  const head = variant === 'base'
+    ? `        SUB  R11, R1, 64       ; ${c1}\n        BCC  handler           ; ${c2}`
+    : `        CHKS R1, 64            ; ${c3}`;
+  return `loop:\n${head}\n${tailLines}`;
+};
+
+const m = document.getElementById('m');
+const what = document.getElementById('what'), asm = document.getElementById('asm');
+let variant = 'base';
+
+function show() {
+  what.textContent = t(WHAT[variant]);
+  asm.textContent = ASM(variant);
+  document.getElementById('pick-base').setAttribute('aria-pressed', String(variant === 'base'));
+  document.getElementById('pick-chk').setAttribute('aria-pressed', String(variant === 'chk'));
+  m.setAttribute('variant', variant);
+}
+document.getElementById('pick-base').onclick = () => { variant = 'base'; show(); };
+document.getElementById('pick-chk').onclick  = () => { variant = 'chk';  show(); };
+show();
+
+// ── замер ───────────────────────────────────────────────────────────────────
+const state = document.getElementById('state'), tbl = document.getElementById('tbl');
+document.getElementById('measure').onclick = async () => {
+  state.textContent = t({ en: ' measuring…', ru: ' считаю…' });
+  const [params, pb, pe] = await Promise.all([
+    fetch('bench_bounds.json').then(r => r.json()),
+    fetch('bench_bounds_b.bin').then(r => r.arrayBuffer()),
+    fetch('bench_bounds_e.bin').then(r => r.arrayBuffer()),
+  ]);
+  const w = new Worker(new URL('./bench-worker.js', import.meta.url), { type: 'module' });
+  w.onmessage = e => {
+    const msg = e.data;
+    if (msg.t === 'error') { state.textContent = ' ' + msg.message; return; }
+    if (msg.t !== 'done') return;
+    const rows = [
+      ['B — ' + t({ en: 'software check', ru: 'проверка программная' }), msg.d.insnsB, msg.d.cyclesB],
+      ['E — ' + t({ en: 'hardware check', ru: 'проверка аппаратная' }), msg.d.insnsE, msg.d.cyclesE],
+    ];
+    tbl.querySelector('tbody').innerHTML = rows.map(([n, i, c]) =>
+      `<tr><td>${n}</td><td class="num">${i.toFixed(2)}</td><td class="num">${c.toFixed(2)}</td></tr>`).join('')
+      + `<tr class="delta"><td>${t({ en: 'saved', ru: 'экономия' })}</td>`
+      + `<td class="num">${msg.d.insnsPer.toFixed(2)}</td>`
+      + `<td class="num">${msg.d.cyclesPer.toFixed(2)} (${msg.d.percent.toFixed(1)}%)</td></tr>`;
+    tbl.hidden = false;
+    state.textContent = ' ' + t({ en: `${msg.b.iterations} and ${msg.e.iterations} iterations on the same instruction budget`,
+                                  ru: `${msg.b.iterations} и ${msg.e.iterations} итераций на одном бюджете инструкций` });
+    w.terminate();
+  };
+  w.postMessage({ params, progB: pb, progE: pe });
+};
+</script>

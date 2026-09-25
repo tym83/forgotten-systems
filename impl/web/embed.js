@@ -15,6 +15,8 @@
  *   autostart  запускать сразу, не дожидаясь щелчка
  *   quota      тактов на кадр (по умолчанию 70000 ≈ 4.2 МГц при 60 кадрах)
  *   start-label подпись кнопки запуска (по умолчанию английская)
+ *   variant    какое железо: `base` (сток) или `chk` (с аппаратной проверкой
+ *              границ массива). Меняется на лету — машина поднимается заново
  *   width      ширина канвы в CSS (по умолчанию 100%)
  *
  * Свойства и события: `.start()`, `.stop()`, `.reset()`, `.setButton(n)`,
@@ -58,9 +60,22 @@ async function loadProm(base) {
 class OberonMachine extends HTMLElement {
   // Подпись кнопки может приехать позже разметки: страница узнаёт свой язык
   // уже после того, как элемент поднялся.
-  static observedAttributes = ['start-label'];
-  attributeChangedCallback(name, _old, value) {
+  static observedAttributes = ['start-label', 'variant'];
+  attributeChangedCallback(name, old, value) {
     if (name === 'start-label' && this._button) this._button.textContent = value;
+    // Смена железа = новая машина. Поток поднимается заново, образ грузится из
+    // кэша, так что переключение стоит доли секунды.
+    if (name === 'variant' && old !== null && old !== value && this._worker) this._reboot();
+  }
+
+  async _reboot() {
+    const wasRunning = this._running;
+    this.stop();
+    this._worker.terminate();
+    this._worker = null; this._ready = false; this._pending = false;
+    this._t0 = 0;
+    await this._boot();
+    if (wasRunning) this.start();
   }
 
   connectedCallback() {
@@ -133,7 +148,8 @@ class OberonMachine extends HTMLElement {
     this._worker.onmessage = e => this._onMessage(e.data);
     const [prom, img] = await Promise.all([loadProm(this._base), loadDisk(this._base)]);
     // Образы уезжают с передачей владения: копировать мегабайт незачем.
-    this._worker.postMessage({ t: 'init', prom: prom.buffer, img: img.buffer },
+    this._worker.postMessage({ t: 'init', variant: this.getAttribute('variant') || 'base',
+                              prom: prom.buffer, img: img.buffer },
                              [prom.buffer, img.buffer]);
   }
 

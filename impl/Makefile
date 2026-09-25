@@ -43,10 +43,19 @@ ext/refemu/reftrace: ext/refemu/trace.c ext/refemu/risc.c ext/refemu/risc-fp.c e
 VINC := $(shell verilator --getenv VERILATOR_ROOT)/include
 WASM_SRC := $$(ls build/obj_wasm/*.cpp | grep -v "__Dpi\.cpp$$")
 
-web: web/risc5.js web/prom_sd.mem web/oberon.dsk web/oberon.dsk.gz
+BENCH := web/bench_bounds_b.bin web/bench_bounds_e.bin web/bench_bounds.json
+
+web: web/risc5.js web/risc5-chk.js web/prom_sd.mem web/oberon.dsk web/oberon.dsk.gz $(BENCH)
 
 build/obj_wasm/VRISC5.cpp: $(RTL)
 	@verilator -Wno-fatal --cc --public-flat-rw --Mdir build/obj_wasm --top-module RISC5 $(RTL)
+
+# Второй вариант ЖЕЛЕЗА: то же ядро с аппаратной проверкой границ. Страница
+# переключает их мгновенно — это и есть «я поменял процессор»: пересобирать
+# нечего, обе модели уже лежат рядом.
+build/obj_wasm_chk/VRISC5.cpp: $(RTL)
+	@verilator -Wno-fatal --cc --public-flat-rw -DWITH_CHK -DCHK_SPLIT \
+	  --Mdir build/obj_wasm_chk --top-module RISC5 $(RTL)
 
 # ⚠ Список порождённых файлов берётся ОБОЛОЧКОЙ, а не $(wildcard).
 #
@@ -56,10 +65,33 @@ build/obj_wasm/VRISC5.cpp: $(RTL)
 #
 # Локально это не видно: файлы лежат с прошлого раза, и кэш их застаёт. Видно
 # только на чистой сборке — то есть там, где собирают все остальные.
-web/risc5.js: build/obj_wasm/VRISC5.cpp tb/wasm_main.cpp tb/wasm_stubs.cpp tb/memdisk.h
-	@em++ -O3 -I build/obj_wasm -I $(VINC) -I $(VINC)/vltstd -I tb 	  -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -DVM_TRACE_SAIF=0 	  $$(ls build/obj_wasm/*.cpp | grep -v "__Dpi\.cpp$$") 	  $(VINC)/verilated.cpp $(VINC)/verilated_threads.cpp tb/wasm_main.cpp tb/wasm_stubs.cpp 	  -s EXPORTED_FUNCTIONS='["_soc_init","_soc_run","_soc_framebuffer","_soc_fb_words","_soc_cycles","_soc_insns","_soc_pc","_soc_key","_soc_mouse","_soc_reg","_soc_flags","_soc_h","_soc_ram","_soc_fb_crc","_soc_disk_word","_soc_disk_size","_soc_poke","_malloc","_free"]' 	  -s EXPORTED_RUNTIME_METHODS='["HEAPU8","HEAPU32"]' 	  -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s EXPORT_ES6=1 -s EXPORT_NAME=OberonRISC5 	  -s ENVIRONMENT=web,node -s FILESYSTEM=0 -o $@
+# ⚠ Один рецепт на оба варианта железа. Два одинаковых рецепта разошлись бы при
+# первой же правке — в этом репозитории так было уже трижды. Поэтому правило
+# одно, а каталог объектов подставляется переменной цели.
+#
+# ⚠ И здесь же НЕЛЬЗЯ заворачивать это в define/eval: внутри него `$@` и
+# shell-подстановка `$(ls …)` разворачиваются дважды, и em++ молча получает
+# пустое `-o`. Проверено.
+WASM_OBJ = build/obj_wasm
+web/risc5-chk.js: WASM_OBJ = build/obj_wasm_chk
+
+web/risc5.js web/risc5-chk.js: build/obj_wasm/VRISC5.cpp build/obj_wasm_chk/VRISC5.cpp \
+                              tb/wasm_main.cpp tb/wasm_stubs.cpp tb/memdisk.h
+	@em++ -O3 -I $(WASM_OBJ) -I $(VINC) -I $(VINC)/vltstd -I tb 	  -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -DVM_TRACE_SAIF=0 	  $$(ls $(WASM_OBJ)/*.cpp | grep -v "__Dpi\.cpp$$") 	  $(VINC)/verilated.cpp $(VINC)/verilated_threads.cpp tb/wasm_main.cpp tb/wasm_stubs.cpp 	  -s EXPORTED_FUNCTIONS='["_soc_init","_soc_run","_soc_framebuffer","_soc_fb_words","_soc_cycles","_soc_insns","_soc_pc","_soc_key","_soc_mouse","_soc_reg","_soc_flags","_soc_h","_soc_ram","_soc_fb_crc","_soc_disk_word","_soc_disk_size","_soc_poke","_malloc","_free"]' 	  -s EXPORTED_RUNTIME_METHODS='["HEAPU8","HEAPU32"]' 	  -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s EXPORT_ES6=1 -s EXPORT_NAME=OberonRISC5 	  -s ENVIRONMENT=web,node -s FILESYSTEM=0 -o $@
 
 web/prom_sd.mem: rtl/prom_sd.mem
+	@cp $< $@
+
+# Нагрузка центрального номера. Исходники порождаются из одного шаблона, потом
+# собираются ассемблером — копии в web/ производные, руками их класть нельзя.
+tests/bench_bounds_b.s tests/bench_bounds_e.s tests/bench_bounds.json: tools/gen_bounds_bench.py
+	@python3 tools/gen_bounds_bench.py > /dev/null
+
+web/bench_bounds_b.bin: tests/bench_bounds_b.bin
+	@cp $< $@
+web/bench_bounds_e.bin: tests/bench_bounds_e.bin
+	@cp $< $@
+web/bench_bounds.json: tests/bench_bounds.json
 	@cp $< $@
 web/oberon.dsk: ext/disk/Oberon-2016-08-02.dsk
 	@cp $< $@
@@ -265,6 +297,7 @@ site: web book
 labs: web book
 	@cd web && node labs-test.mjs
 	@cd web && node worker-test.mjs
+	@cd web && node bench-test.mjs
 
 # Полная пересборка системы Обероном внутри самой системы на RTL.
 # Три сессии: пачками, затем поодиночке то, что упало в ловушку 4 (исчерпание

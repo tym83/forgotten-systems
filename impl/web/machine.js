@@ -7,7 +7,20 @@
 // Кадровый буфер хранится снизу вверх (VID.v: vidadr = Org + {3'b0, ~vcnt, hword}),
 // поэтому строки при отрисовке переворачиваются.
 
-import OberonRISC5 from './risc5.js';
+// ⚠ Вариант железа подгружается ПО ИМЕНИ, а не импортом: моделей две —
+// базовая и с аппаратной проверкой границ, и страница переключает их на лету.
+// Статический импорт притащил бы обе в любой сборке.
+export const VARIANTS = {
+  base: { file: './risc5.js',     title: { en: 'stock core',            ru: 'стоковое ядро' } },
+  chk:  { file: './risc5-chk.js', title: { en: 'core with CHK',          ru: 'ядро с CHK' } },
+};
+
+const loaded = new Map();
+export async function loadVariant(name = 'base') {
+  const v = VARIANTS[name] || VARIANTS.base;
+  if (!loaded.has(name)) loaded.set(name, (await import(v.file)).default);
+  return loaded.get(name);
+}
 
 const W = 1024, H = 768;
 
@@ -82,10 +95,10 @@ export function typeCodes(text) {
 }
 
 export class Machine {
-  static async create(prom, img) {
-    const M = await OberonRISC5();
+  static async create(prom, img, variant = 'base') {
+    const M = await (await loadVariant(variant))();
     const m = new Machine();
-    m.M = M; m.prom = prom; m.img = img;
+    m.M = M; m.prom = prom; m.img = img; m.variant = variant;
     m._load();
     return m;
   }

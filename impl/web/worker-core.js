@@ -40,8 +40,9 @@ export function createHandler(post) {
   return async function handle(msg) {
     switch (msg.t) {
       case 'init':
-        m = await Machine.create(new Uint32Array(msg.prom), new Uint8Array(msg.img));
-        post({ t: 'ready' });
+        m = await Machine.create(new Uint32Array(msg.prom), new Uint8Array(msg.img),
+                                 msg.variant || 'base');
+        post({ t: 'ready', variant: m.variant });
         return;
 
       case 'run':

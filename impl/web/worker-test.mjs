@@ -67,5 +67,34 @@ say(after.reset === true && after.insns < runFor, `откат возвращае
 await handle({ t: 'таких-не-бывает' });
 say(!!last('error'), 'неизвестное сообщение не проглатывается молча');
 
+// ── второе железо ────────────────────────────────────────────────────────────
+// Ядро с аппаратной проверкой границ обязано гонять ту же систему побитово
+// так же: расширение системы команд, которое меняет поведение старого кода, —
+// не расширение, а другая машина.
+const out2 = [];
+const handle2 = createHandler(msg => out2.push(msg));
+const last2 = t => [...out2].reverse().find(m => m.t === t);
+await handle2({ t: 'init', variant: 'chk', prom: new Uint32Array(prom).buffer, img: img.buffer });
+say(last2('ready')?.variant === 'chk', 'поток поднимает выбранный вариант железа');
+for (let i = 0; i < 15; i++) {
+  await handle2({ t: 'run', quota: 1000000 });
+  await handle2({ t: 'recycle', buf: last2('frame').buf });
+}
+await handle({ t: 'peek', id: 1 });
+await handle2({ t: 'peek', id: 2 });
+// Базовая машина к этому месту уже откачена, поэтому гоняем её столько же.
+const outA = [];
+const handleA = createHandler(m => outA.push(m));
+const lastA = t => [...outA].reverse().find(m => m.t === t);
+await handleA({ t: 'init', prom: new Uint32Array(prom).buffer, img: img.buffer });
+for (let i = 0; i < 15; i++) {
+  await handleA({ t: 'run', quota: 1000000 });
+  await handleA({ t: 'recycle', buf: lastA('frame').buf });
+}
+await handleA({ t: 'peek', id: 3 });
+const a = lastA('peek'), c = last2('peek');
+say(a.crc === c.crc && a.insns === c.insns,
+    `оба ядра грузят систему одинаково: CRC ${(a.crc >>> 0).toString(16).toUpperCase()}, ${a.insns} инструкций`);
+
 console.log(bad ? `\n❌ протокол потока: ${bad} расхождений` : '\n✅ протокол рабочего потока цел');
 process.exit(bad ? 1 : 0);

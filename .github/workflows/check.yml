@@ -74,3 +74,9 @@ jobs:
       - name: Протокол рабочего потока
         run: node worker-test.mjs
         working-directory: impl/web
+
+      # Числа центрального номера: их видит читатель на странице, и считаются
+      # они тем же модулем, что и здесь.
+      - name: Цена проверки границ
+        run: node bench-test.mjs
+        working-directory: impl/web
