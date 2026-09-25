@@ -1,0 +1,26 @@
+# Исполняемая среда языка Оберон — для разовых задач и постоянной службы.
+#
+# Это НЕ операционная система Оберон и не эмулятор машины: здесь компилятор
+# Вирта и его библиотека, запускаемые как обычная программа. Тот же компилятор,
+# что внутри системы, — но без окон, мыши и экрана. Ровно то, что нужно, когда
+# надо посчитать и отдать ответ.
+#
+# Основа — Norebo (pdewacht): среда исполнения RISC5 на C, в которой крутится
+# настоящий объектный код компилятора Вирта.
+FROM docker.io/library/gcc:14-bookworm AS build
+WORKDIR /src
+COPY ext/norebo/ ./norebo/
+RUN cc -O2 -o /norebo norebo/Runtime/norebo.c norebo/Runtime/risc-cpu.c
+
+FROM docker.io/library/debian:bookworm-slim
+RUN useradd -u 10001 -m oberon
+COPY --from=build /norebo /usr/local/bin/norebo
+# Библиотека и загрузочные объектные файлы: без них компилятору не на чем стоять.
+COPY ext/norebo/Norebo/  /opt/oberon/Norebo/
+COPY ext/norebo/Oberon/  /opt/oberon/Oberon/
+COPY ext/norebo/build2/  /opt/oberon/build2/
+COPY deploy/oberon-run.sh /usr/local/bin/oberon-run
+RUN chmod +x /usr/local/bin/oberon-run
+USER 10001
+WORKDIR /work
+ENTRYPOINT ["/usr/local/bin/oberon-run"]

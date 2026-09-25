@@ -8,11 +8,9 @@ __pycache__/
 # есть, поэтому собранные risc5.wasm, risc5.js и образ диска обязаны лежать в
 # репозитории. Пересобираются целью `make site` в impl/.
 
-# ⚠ Библиотека ячеек Nangate45 НЕ публикуется: её шапка прямо говорит
-# «provided pursuant to a License Agreement containing restrictions on its use»
-# и «does not indicate actual or intended publication of this file».
-# `make deps` корректно переживает её отсутствие, `make syn`/`fmax` без неё
-# не пойдут — это ожидаемо.
+# Библиотеки ячеек в репозиторий не кладём: Sky130 весит 12 МБ и тянется целью
+# `make lib` (она же вызывается из `make syn`). Прежняя Nangate45 не кладётся по
+# другой причине — её шапка прямо запрещает публикацию, см. THIRD-PARTY.md.
 impl/syn/lib/*.lib
 
 # Рабочее дерево QEMU для сборки цели: 1 ГБ чужих исходников, в репозиторий не кладём

@@ -24,6 +24,8 @@
 #include "system/system.h"
 #include "cpu.h"
 #include "oberon-io.h"
+#include "system/blockdev.h"
+#include "hw/core/qdev-properties-system.h"
 
 /*
  * ПЗУ в железе — 512 слов: PROM.v берёт только adr[10:2]. Выборка кода
@@ -64,10 +66,41 @@ static void oberon_init(MachineState *machine)
      * сравнивать состояние регистров команда за командой.
      */
     /*
+     * Экран. Кадровый буфер лежит в обычной памяти, отдельной видеопамяти
+     * у машины нет — устройство просто читает её и рисует.
+     */
+    OberonDisplay *disp = g_new0(OberonDisplay, 1);
+    oberon_display_init(disp, ram);
+
+    /*
      * Порты. Без счётчика миллисекунд система не доходит даже до экрана:
      * на нём держится всё, что связано со временем.
      */
-    oberon_io_init(g_new0(OberonIOState, 1), sys, OBERON_IO_BASE);
+    {
+        /*
+         * Образ системы подаётся приводом без шины:
+         *   -drive if=none,id=sd0,file=oberon.dsk,format=raw
+         *
+         * Именно без шины: QEMU считает осиротевшим любой привод с шиной,
+         * который никто не забрал устройством, и отказывается запускаться.
+         * Карта SD у нас не устройство qdev, а часть портов, поэтому берём
+         * её по имени.
+         */
+        BlockBackend *blk = blk_by_name("sd0");
+
+        if (!blk) {
+            DriveInfo *dinfo = drive_get(IF_NONE, 0, 0);
+            blk = dinfo ? blk_by_legacy_dinfo(dinfo) : NULL;
+        }
+
+        if (!blk) {
+            warn_report("образ диска не задан: добавьте -drive if=none,id=sd0,file=<образ>,format=raw");
+        }
+        OberonIOState *io = g_new0(OberonIOState, 1);
+        oberon_io_init(io, sys, OBERON_IO_BASE, blk);
+        io->chord_used = &disp->hint_done;
+        oberon_input_init(io);
+    }
 
     if (machine->firmware) {
         ssize_t n = load_image_mr(machine->firmware, rom);

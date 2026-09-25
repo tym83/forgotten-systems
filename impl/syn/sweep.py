@@ -7,11 +7,27 @@
 ВАЖНО: без -constr (драйвер + нагрузка) параметр -D игнорируется ПОЛНОСТЬЮ — проверено,
 площадь совпадает до последнего знака при -D 200 и -D 50000. См. docs/FINDING-03.
 Результат — график площадь-vs-период, а не одна цифра.
+
+Библиотека ячеек — Sky130 (SkyWater 130 нм), Apache-2.0.
+
+Почему не Nangate45, на которой мерилось раньше: её шапка прямо запрещает
+публикацию — «provided pursuant to a License Agreement containing restrictions
+on its use», «does not indicate actual or intended publication of this file».
+Из-за этого синтез не работал из чистого клона, и в репозиторий её класть
+нельзя.
+
+Sky130 — настоящий техпроцесс, на нём физически делают чипы, и она свободна.
+Абсолютные числа из-за смены техпроцесса другие (130 нм против 45 нм), но наши
+утверждения — относительные дельты, и они переход переживают: цена команды
+проверки границ по площади +1.04% против +0.32…0.85% на Nangate45. Порядок и
+знак те же.
+
+Файл тянется целью `make lib`, в репозиторий не кладётся: 12 МБ.
 """
 import re, subprocess, sys, csv, os, pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-LIB  = ROOT / "syn/lib/nangate45_typ.lib"
+LIB  = ROOT / "syn/lib/sky130_fd_sc_hd__tt_025C_1v80.lib"
 SRC  = ["rtl/RISC5.v", "rtl/Registers.v", "rtl/Multiplier.v", "rtl/Divider.v",
         "rtl/FPAdder.v", "rtl/FPMultiplier.v", "rtl/FPDivider.v",
         "rtl/LeftShifter.v", "rtl/RightShifter.v"]

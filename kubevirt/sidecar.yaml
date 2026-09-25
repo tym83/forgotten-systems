@@ -1,0 +1,53 @@
+# Пример: виртуальная машина RISC5 в Cozystack через перехватчик KubeVirt.
+#
+# Форка KubeVirt не требуется. Перехватчик — штатная точка расширения:
+# сторонний контейнер получает описание домена перед запуском и возвращает
+# изменённое. Здесь он подаётся скриптом в ConfigMap, так что и своего образа
+# перехватчика не нужно — используется штатная обёртка sidecar-shim.
+#
+# ⚠ Требуется два условия на стороне кластера:
+#   1. включён признак Sidecar в ресурсе KubeVirt:
+#        spec.configuration.developerConfiguration.featureGates: [Sidecar]
+#   2. образ virt-launcher собран с libvirt, знающим архитектуру risc5
+#      (патч из qemu/libvirt/, ~6 строк). Переключается настройкой
+#      imageRegistry на ресурсе KubeVirt — форк Cozystack тоже не нужен.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: risc5-hook
+data:
+  # Имя ключа значения не имеет; важен hookPath в объявлении ниже.
+  onDefineDomain: |
+    СЮДА-ВСТАВИТЬ-СОДЕРЖИМОЕ-onDefineDomain.py
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachineInstance
+metadata:
+  name: oberon
+  annotations:
+    # Том с эмулятором и образами монтируется И в перехватчик, И в контейнер,
+    # где работает libvirt — за это отвечает sharedComputePath.
+    hooks.kubevirt.io/hookSidecars: |
+      [{
+        "args": ["--version", "v1alpha2"],
+        "configMap": {
+          "name": "risc5-hook",
+          "key": "onDefineDomain",
+          "hookPath": "/usr/bin/onDefineDomain"
+        },
+        "pvc": {
+          "name": "risc5-payload",
+          "volumePath": "/var/run/risc5",
+          "sharedComputePath": "/var/run/risc5"
+        }
+      }]
+spec:
+  domain:
+    # Эти значения перехватчик всё равно заменит; KubeVirt требует их
+    # заполнить, чтобы собрать описание, которое мы потом перепишем.
+    resources:
+      requests:
+        memory: 128Mi
+    devices: {}
+  volumes: []

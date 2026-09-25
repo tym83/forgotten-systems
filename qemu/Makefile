@@ -36,7 +36,7 @@ build:
 	@docker run --rm -v "$$(cd $(QEMU_SRC) && pwd):/src" qemu-build:risc5 \
 	  'cd /src && test -d build || ./configure --target-list=risc5-softmmu \
 	     --disable-docs --disable-tools --disable-guest-agent \
-	     --without-default-features >/dev/null; ninja -C build'
+	     --without-default-features --enable-vnc --enable-pixman >/dev/null; ninja -C build'
 	@echo "  собран: $(QEMU_SRC)/build/qemu-system-risc5"
 
 # Главная проверка цели: не «собралось», а «считает то же, что железо».
