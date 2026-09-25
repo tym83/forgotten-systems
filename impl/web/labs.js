@@ -503,6 +503,9 @@ function localise(lab) {
     if (at(f) !== undefined) out[f] = at(f);
   }
   if (o[`level.${lab.level}`]) out.level = o[`level.${lab.level}`];
+  if (lab.read) {
+    out.read = lab.read.map(([f, title]) => [f, o[`book.${f}`] ?? title]);
+  }
   out.steps = lab.steps.map((st, i) => {
     const tr = at(`step.${i}`);
     return tr === undefined ? st : { ...st, text: tr };

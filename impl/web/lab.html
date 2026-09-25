@@ -251,7 +251,9 @@ setInterval(() => {
   // из неё то единственное, что важно: рисует машина или замерла.
   const crc = m.fbCrc(), drawing = crc !== lastCrc; lastCrc = crc;
   $('stat').textContent =
-    `${(m.insns / 1e6).toFixed(1)} млн команд · адрес ${hex(m.pc)} · экран ${drawing ? 'меняется' : 'замер'}`;
+    (LANG === 'ru'
+      ? `${(m.insns / 1e6).toFixed(1)} млн команд · адрес ${hex(m.pc)} · экран ${drawing ? 'меняется' : 'замер'}`
+      : `${(m.insns / 1e6).toFixed(1)}M instructions · at ${hex(m.pc)} · screen ${drawing ? 'changing' : 'still'}`);
   $('pc').textContent = hex(m.pc);
 }, 250);
 </script>

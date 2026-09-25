@@ -9,6 +9,17 @@
  *        <номер>.step.<индекс> для текста шага.
  */
 export const EN = {
+  // Названия глав методички: одни и те же у разных лабораторий, поэтому
+  // ключом служит имя файла, а не номер задания.
+  'book.01-zachem.html':       'What is real here',
+  'book.02-mashina.html':      'The machine: RISC5',
+  'book.03-yazyk.html':        'The language: Oberon in one chapter',
+  'book.04-sistema.html':      'The system: text instead of buttons',
+  'book.05-moduli.html':       'Modules, symbol files and keys',
+  'book.06-kompilyator.html':  'The compiler from inside',
+  'book.07-samoraskrutka.html': 'Self-hosting and the fixed point',
+  'book.08-izmereno.html':     'What we measured',
+
   'level.смотреть': 'observe',
   'level.менять':   'modify',
   'level.ломать':   'break',
