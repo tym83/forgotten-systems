@@ -81,7 +81,7 @@
 <header>
   <h1 data-i18n-en="Labs · Oberon on real Verilog">Лаборатории · Оберон на настоящем Verilog</h1>
   <select id="pick"></select>
-  <a href="book/index.html" style="color:var(--acc)" data-i18n-en="Handbook">Методичка</a>
+  <a href="book/index.html" id="bookLink" style="color:var(--acc)" data-i18n-en="Handbook">Методичка</a>
   <button id="reset" data-i18n-en="Reset">Откатить</button>
   <button id="pause" data-i18n-en="Pause">Пауза</button>
   <label class="stat"><span data-i18n-en="mouse">мышь</span>
@@ -144,6 +144,11 @@ const hex = n => (n >>> 0).toString(16).toUpperCase();
 // а `?lang=ru` в адресе перебивает запомненное.
 applyMarkup(document);
 LANGS_FILL();
+// Ссылка на методичку в шапке — туда же, на нужный язык.
+if (LANG !== 'ru') {
+  const bl = $('bookLink');
+  if (bl) bl.href = `book/${LANG}/index.html`;
+}
 function LANGS_FILL() {
   const sel = $('lang');
   if (!sel) return;
@@ -181,7 +186,9 @@ function render() {
   // строкой из labs.js — проставляем после каждой перерисовки.
   labelAltKeys(document);
   $('read').innerHTML = (lab.read || [])
-    .map(([f, t]) => `<a href="book/${f}">📖 ${t}</a>`).join(' · ');
+    // Английские главы лежат отдельным каталогом: так оформление и ссылки
+    // остаются относительными внутри каждого языка.
+    .map(([f, t]) => `<a href="book/${LANG === 'ru' ? '' : LANG + '/'}${f}">📖 ${t}</a>`).join(' · ');
   $('steps').innerHTML = '';
   lab.steps.forEach((st, i) => {
     const li = document.createElement('li');

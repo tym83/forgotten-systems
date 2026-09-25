@@ -1,0 +1,131 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Modules, symbol files and keys</title>
+<style>
+:root { color-scheme: light dark; --bg:#f6f6f4; --fg:#1a1a1a; --mut:#666;
+        --line:#d8d8d4; --acc:#2b5fa8; --code:#eceae5; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#16181c; --fg:#e6e6e6; --mut:#9aa0a6; --line:#2e3238;
+          --acc:#7aa7e8; --code:#20242a; } }
+* { box-sizing:border-box }
+body { margin:0; background:var(--bg); color:var(--fg);
+       font:16px/1.65 ui-serif,Georgia,"Times New Roman",serif; }
+.wrap { display:grid; grid-template-columns:240px minmax(0,72ch); gap:40px;
+        max-width:1100px; margin:0 auto; padding:28px 20px 80px }
+@media (max-width:900px) { .wrap { grid-template-columns:1fr; gap:16px } }
+nav { position:sticky; top:20px; align-self:start;
+      font:13px/1.5 ui-sans-serif,system-ui,sans-serif }
+nav a { display:block; padding:3px 0; color:var(--mut); text-decoration:none }
+nav a:hover { color:var(--acc) }
+nav a.cur { color:var(--fg); font-weight:600 }
+nav .top { font-weight:600; color:var(--fg); margin-bottom:10px; display:block }
+h1 { font-size:26px; line-height:1.25; margin:0 0 24px }
+h2 { font-size:20px; margin:32px 0 10px }
+h3 { font-size:17px; margin:24px 0 8px }
+p, li { margin:0 0 12px }
+ul, ol { padding-left:24px }
+a { color:var(--acc) }
+code { font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+       background:var(--code); padding:1px 4px; border-radius:3px }
+pre { background:var(--code); padding:12px 14px; border-radius:7px;
+      overflow-x:auto; border:1px solid var(--line) }
+pre code { background:none; padding:0; font-size:12.5px }
+table { border-collapse:collapse; width:100%; font-size:14px; margin:0 0 16px;
+        display:block; overflow-x:auto }
+th, td { border:1px solid var(--line); padding:6px 9px; text-align:left }
+th { background:var(--code) }
+blockquote { margin:0 0 14px; padding:8px 14px; border-left:3px solid var(--line);
+             color:var(--mut) }
+.foot { margin-top:48px; padding-top:16px; border-top:1px solid var(--line);
+        display:flex; justify-content:space-between;
+        font:14px ui-sans-serif,system-ui,sans-serif }
+</style>
+<div class="wrap">
+<nav><a class="top" href="index.html">Oberon: the handbook</a><a class="" href="01-zachem.html">What this is for, and what here is real</a><a class="" href="02-mashina.html">The machine: RISC5</a><a class="" href="03-yazyk.html">The language: Oberon in one chapter</a><a class="" href="04-sistema.html">The system: text instead of buttons</a><a class="cur" href="05-moduli.html">Modules, symbol files and keys</a><a class="" href="06-kompilyator.html">The compiler from inside</a><a class="" href="07-samoraskrutka.html">Self-hosting and the fixed point</a><a class="" href="08-izmereno.html">What we measured and what we found</a><a href="../../lab.html" style="margin-top:14px">→ Labs</a></nav>
+<article><h1>Modules, symbol files and keys</h1>
+<p>Oberon has no header files. The compiler extracts a module's interface from
+the module itself and puts it alongside — in a <strong>symbol file</strong> with the
+extension <code>.smb</code>. The mechanism is small, but it is what holds separate
+compilation together, and without understanding keys half the compiler's
+messages look cryptic.</p>
+<h2>What compilation produces</h2>
+<p>From <code>Math.Mod</code> the compiler makes two files:</p>
+<ul>
+<li><code>Math.rsc</code> — the object code: instructions, data, strings, fixup tables, the
+  import list and the entry points;</li>
+<li><code>Math.smb</code> — the symbol file: only the exported names with their types.</li>
+</ul>
+<p>An <code>.rsc</code> can be inspected with <code>ORTool.DecObj Math.rsc</code>, which prints the
+header and the disassembled code.</p>
+<h2>The key</h2>
+<p>In the header of every object and symbol file sits a <strong>key</strong> — a number
+computed over the contents of the interface. The log shows it last:</p>
+<pre><code>compiling Math  447     0 32C32F12
+</code></pre>
+<p>The key changes if and only if the <strong>interface</strong> changes: which names are
+exported, their types, their order. Editing the body of a procedure while its
+heading stays the same leaves the key alone.</p>
+<p>Every module remembers the keys of everything it imports. On loading, the system
+compares them against the real ones. If they differ the module does not load, and
+you get a complaint about a mismatch.</p>
+<p>This guards against the nastiest error in separate compilation: you build a
+module, change a library's interface, rebuild only the library — and end up with
+a program calling a procedure at the old offset. In Oberon that cannot happen:
+it simply will not start.</p>
+<h2>The <code>/s</code> option</h2>
+<p>Hence the meaning of <code>/s</code> in the compile command. By default the compiler
+<strong>refuses</strong> to overwrite a symbol file when the interface has changed — because
+doing so would silently break everything already built against it.</p>
+<p><code>/s</code> says "yes, I know, overwrite it". Everything that depends on the module
+must then be rebuilt, in order from those that depend on nothing to those that
+depend on everything.</p>
+<p>Rebuilding an unchanged source leaves the interface alone, so the key stays the
+same and <code>/s</code> does no harm. That is why it appears everywhere in the labs.</p>
+<h2>Build order</h2>
+<p>The order comes from the imports. For this system it works out like this (the
+beginning):</p>
+<pre><code>Kernel  FileDir  Files  Modules  Input  Display  Viewers
+Fonts  Texts  Oberon  ...  ORS  ORB  ORG  ORP  ...
+</code></pre>
+<p>There is no need to remember it: it follows from the sources themselves by a
+topological sort over <code>IMPORT</code>. That is how we do it when rebuilding the whole
+system.</p>
+<h2>What a rebuild shows</h2>
+<p>If the sources and the compiler agree, rebuilding an unchanged module gives a
+<strong>byte-identical</strong> object file. That is a strong property and worth checking: it
+means the compiler is deterministic and that the shipped binaries correspond to
+the shipped sources.</p>
+<p>We rebuilt the whole system inside itself. Thirty-seven object files out of
+thirty-nine came out byte-identical. The two exceptions turned out to be
+findings:</p>
+<ul>
+<li><strong><code>Math.rsc</code> on the image is out of date.</strong> The shipped file holds 449 words
+  of code, a rebuild gives 447 — with the same key <code>32C32F12</code>. The interface is
+  the same; the code was produced by a different version of the compiler than
+  the one sitting on that disk.</li>
+<li><strong><code>PIO.rsc</code> and <code>PIO.smb</code> were absent altogether</strong> and appear only after a
+  rebuild.</li>
+</ul>
+<p>You will reproduce the first with your own hands in lab 7: look at the length of
+<code>Math.rsc</code> before and after.</p>
+<h2>Three more inconsistencies</h2>
+<p>It also turned out that three modules from this image <strong>do not compile with the
+compiler from the same image</strong>:</p>
+<table>
+<thead><tr><th>module</th><th>message</th><th>cause</th></tr></thead>
+<tbody>
+<tr><td><code>RISC</code></td><td><code>pos 926 bad divisor</code></td><td>the text has <code>IR DIV 80000000H</code>, and that constant is negative as a signed integer; the divisor must be positive</td></tr>
+<tr><td><code>ORC</code></td><td><code>import not available</code></td><td>imports a module <code>V24</code> that is on the image neither as source nor as a symbol file</td></tr>
+<tr><td><code>Net</code></td><td><code>incompatible parameters</code>, nine times</td><td>the signatures of calls to <code>SCC</code> have diverged from the <code>SCC.Mod</code> on the same image</td></tr>
+</tbody>
+</table>
+<p>This is not our machine failing and not a build error: the diagnostics come from
+the Oberon compiler itself, and the <code>Math.rsc</code> divergence shows up in a
+byte-for-byte comparison of files.</p>
+<p>The lesson worth carrying away: <strong>a distributed system image need not be
+consistent with itself, and the only way to find out is to try rebuilding
+it.</strong></p><div class="foot"><span><a href="04-sistema.html">← The system: text instead of buttons</a></span><span><a href="06-kompilyator.html">The compiler from inside →</a></span></div>
+
+</article>
+</div>

@@ -1,0 +1,129 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Self-hosting and the fixed point</title>
+<style>
+:root { color-scheme: light dark; --bg:#f6f6f4; --fg:#1a1a1a; --mut:#666;
+        --line:#d8d8d4; --acc:#2b5fa8; --code:#eceae5; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#16181c; --fg:#e6e6e6; --mut:#9aa0a6; --line:#2e3238;
+          --acc:#7aa7e8; --code:#20242a; } }
+* { box-sizing:border-box }
+body { margin:0; background:var(--bg); color:var(--fg);
+       font:16px/1.65 ui-serif,Georgia,"Times New Roman",serif; }
+.wrap { display:grid; grid-template-columns:240px minmax(0,72ch); gap:40px;
+        max-width:1100px; margin:0 auto; padding:28px 20px 80px }
+@media (max-width:900px) { .wrap { grid-template-columns:1fr; gap:16px } }
+nav { position:sticky; top:20px; align-self:start;
+      font:13px/1.5 ui-sans-serif,system-ui,sans-serif }
+nav a { display:block; padding:3px 0; color:var(--mut); text-decoration:none }
+nav a:hover { color:var(--acc) }
+nav a.cur { color:var(--fg); font-weight:600 }
+nav .top { font-weight:600; color:var(--fg); margin-bottom:10px; display:block }
+h1 { font-size:26px; line-height:1.25; margin:0 0 24px }
+h2 { font-size:20px; margin:32px 0 10px }
+h3 { font-size:17px; margin:24px 0 8px }
+p, li { margin:0 0 12px }
+ul, ol { padding-left:24px }
+a { color:var(--acc) }
+code { font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+       background:var(--code); padding:1px 4px; border-radius:3px }
+pre { background:var(--code); padding:12px 14px; border-radius:7px;
+      overflow-x:auto; border:1px solid var(--line) }
+pre code { background:none; padding:0; font-size:12.5px }
+table { border-collapse:collapse; width:100%; font-size:14px; margin:0 0 16px;
+        display:block; overflow-x:auto }
+th, td { border:1px solid var(--line); padding:6px 9px; text-align:left }
+th { background:var(--code) }
+blockquote { margin:0 0 14px; padding:8px 14px; border-left:3px solid var(--line);
+             color:var(--mut) }
+.foot { margin-top:48px; padding-top:16px; border-top:1px solid var(--line);
+        display:flex; justify-content:space-between;
+        font:14px ui-sans-serif,system-ui,sans-serif }
+</style>
+<div class="wrap">
+<nav><a class="top" href="index.html">Oberon: the handbook</a><a class="" href="01-zachem.html">What this is for, and what here is real</a><a class="" href="02-mashina.html">The machine: RISC5</a><a class="" href="03-yazyk.html">The language: Oberon in one chapter</a><a class="" href="04-sistema.html">The system: text instead of buttons</a><a class="" href="05-moduli.html">Modules, symbol files and keys</a><a class="" href="06-kompilyator.html">The compiler from inside</a><a class="cur" href="07-samoraskrutka.html">Self-hosting and the fixed point</a><a class="" href="08-izmereno.html">What we measured and what we found</a><a href="../../lab.html" style="margin-top:14px">→ Labs</a></nav>
+<article><h1>Self-hosting and the fixed point</h1>
+<p>The Oberon compiler is written in Oberon. To build it, therefore, an Oberon
+compiler is needed. This is not a paradox but ordinary <strong>self-hosting</strong> — but
+it has a checkable consequence worth understanding precisely, because it is
+regularly confused.</p>
+<h2>What self-hosting does not prove</h2>
+<p>The phrase "the compiler builds itself" means nothing on its own. A compiler
+with a bug will build itself too — it will simply emit wrong code, and since
+there is nobody to check, the bug goes unnoticed.</p>
+<h2>What a fixed point proves</h2>
+<p>The real check looks different. Take the compiler sitting on the disk — call it
+<strong>generation 0</strong> — and build its own sources with it. That gives
+<strong>generation 1</strong>. Now unload the old compiler from memory, load generation 1 and
+build the very same sources again. That gives <strong>generation 2</strong>.</p>
+<p>If generations 1 and 2 match byte for byte, a fixed point has been reached.</p>
+<p>Why that is substantial. Generation 1 was built by the <strong>old</strong> binary,
+generation 2 by the <strong>new</strong> one. If the new compiler emitted even slightly
+different code from the old, the generations would diverge. Matching means the
+transformation "source → binary" is stable: applied to its own output, it
+changes nothing.</p>
+<p>This does not prove the compiler correct. It proves it consistent with itself,
+and that a compiler it builds behaves as the one that built it.</p>
+<h2>What it looks like on screen</h2>
+<p>In lab 7 you run one module, but the full experiment goes the same way — two
+blocks in the log:</p>
+<pre><code>OR Compiler  18.4.2016
+  compiling ORS  1756    992 76547166
+  compiling ORB  2325    408 2F03B698
+  compiling ORG  6650  34980 8F476858
+  compiling ORP  6188    144 E6FCC519
+System.Free
+ORP unloading
+ORG unloading
+ORB unloading
+ORS unloading
+OR Compiler  18.4.2016
+  compiling ORS  1756    992 76547166
+  compiling ORB  2325    408 2F03B698
+  compiling ORG  6650  34980 8F476858
+  compiling ORP  6188    144 E6FCC519
+</code></pre>
+<p>Code sizes, data sizes and keys match for all four modules. The line
+<code>OR Compiler 18.4.2016</code> is printed anew in the second block: that is the
+<strong>new</strong> <code>ORP.rsc</code>, loaded from disk, announcing itself. So the second generation
+really was built by fresh binaries and not by old ones left in memory — without
+<code>System.Free</code> the experiment would have been meaningless.</p>
+<p>The whole run is 715 million instructions and 1.1 billion cycles on simulated
+hardware.</p>
+<h2>Where C remains in this system</h2>
+<p>The honest answer: in two places, and both outside the machine.</p>
+<p><strong>The simulator.</strong> Verilator translates Verilog into C++, and that C++ executes
+the processor's logic. But this is not an implementation of RISC5 — it is an
+execution of its description. On an FPGA the same Verilog has no C anywhere.</p>
+<p><strong>The bridge to the host file system.</strong> When the compiler runs not inside the
+system but directly on the core, something has to hand it files. That wrapper is
+in C, and it substitutes for the file system only; it computes nothing itself.</p>
+<p>The browser version does not even have that bridge: there the files live in a
+disk image and the compiler runs from inside the system, by mouse and keyboard.
+No C remains in the loop at all.</p>
+<h2>Rebuilding the whole system</h2>
+<p>The compiler is only four modules out of forty-two. The full experiment is to
+rebuild the entire system: <code>Kernel</code>, <code>Files</code>, <code>Display</code>, <code>Viewers</code>, <code>Texts</code>,
+<code>Oberon</code>, the editor, the graphics, the compiler itself — and compare the result
+against what was on the disk.</p>
+<p>We did that. Thirty-seven object files matched byte for byte, and the rebuilt
+image boots and gives the same screen checksum. Three modules do not compile and
+one shipped file is out of date; that is in the chapter on
+<a href="05-moduli.html">modules</a>.</p>
+<h2>A trap in the check</h2>
+<p>Finally, a methodological note useful well beyond Oberon.</p>
+<p>The first version of our check compared disk images byte for byte and happily
+reported "fixed point reached". It then turned out to pass just as happily on an
+<strong>untouched</strong> image, where no rebuild had run at all. A byte comparison does not
+distinguish "rebuilt and matched" from "never touched".</p>
+<p>File dates were no help: this machine has no clock and every timestamp is
+zero.</p>
+<p>The fix was positive evidence: after a real rebuild the disk <strong>must</strong> gain
+<code>PIO.rsc</code> and <code>PIO.smb</code>, which were not there, and <code>Math.rsc</code> <strong>must</strong> change.
+Their absence now counts as failure rather than as leniency.</p>
+<p>The moral: a check that cannot fail checks nothing. Before believing a green
+tick, break what it guards and make sure it turns red.</p><div class="foot"><span><a href="06-kompilyator.html">← The compiler from inside</a></span><span><a href="08-izmereno.html">What we measured and what we found →</a></span></div>
+
+</article>
+</div>

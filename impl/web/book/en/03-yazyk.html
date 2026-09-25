@@ -1,0 +1,191 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The language: Oberon in one chapter</title>
+<style>
+:root { color-scheme: light dark; --bg:#f6f6f4; --fg:#1a1a1a; --mut:#666;
+        --line:#d8d8d4; --acc:#2b5fa8; --code:#eceae5; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#16181c; --fg:#e6e6e6; --mut:#9aa0a6; --line:#2e3238;
+          --acc:#7aa7e8; --code:#20242a; } }
+* { box-sizing:border-box }
+body { margin:0; background:var(--bg); color:var(--fg);
+       font:16px/1.65 ui-serif,Georgia,"Times New Roman",serif; }
+.wrap { display:grid; grid-template-columns:240px minmax(0,72ch); gap:40px;
+        max-width:1100px; margin:0 auto; padding:28px 20px 80px }
+@media (max-width:900px) { .wrap { grid-template-columns:1fr; gap:16px } }
+nav { position:sticky; top:20px; align-self:start;
+      font:13px/1.5 ui-sans-serif,system-ui,sans-serif }
+nav a { display:block; padding:3px 0; color:var(--mut); text-decoration:none }
+nav a:hover { color:var(--acc) }
+nav a.cur { color:var(--fg); font-weight:600 }
+nav .top { font-weight:600; color:var(--fg); margin-bottom:10px; display:block }
+h1 { font-size:26px; line-height:1.25; margin:0 0 24px }
+h2 { font-size:20px; margin:32px 0 10px }
+h3 { font-size:17px; margin:24px 0 8px }
+p, li { margin:0 0 12px }
+ul, ol { padding-left:24px }
+a { color:var(--acc) }
+code { font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+       background:var(--code); padding:1px 4px; border-radius:3px }
+pre { background:var(--code); padding:12px 14px; border-radius:7px;
+      overflow-x:auto; border:1px solid var(--line) }
+pre code { background:none; padding:0; font-size:12.5px }
+table { border-collapse:collapse; width:100%; font-size:14px; margin:0 0 16px;
+        display:block; overflow-x:auto }
+th, td { border:1px solid var(--line); padding:6px 9px; text-align:left }
+th { background:var(--code) }
+blockquote { margin:0 0 14px; padding:8px 14px; border-left:3px solid var(--line);
+             color:var(--mut) }
+.foot { margin-top:48px; padding-top:16px; border-top:1px solid var(--line);
+        display:flex; justify-content:space-between;
+        font:14px ui-sans-serif,system-ui,sans-serif }
+</style>
+<div class="wrap">
+<nav><a class="top" href="index.html">Oberon: the handbook</a><a class="" href="01-zachem.html">What this is for, and what here is real</a><a class="" href="02-mashina.html">The machine: RISC5</a><a class="cur" href="03-yazyk.html">The language: Oberon in one chapter</a><a class="" href="04-sistema.html">The system: text instead of buttons</a><a class="" href="05-moduli.html">Modules, symbol files and keys</a><a class="" href="06-kompilyator.html">The compiler from inside</a><a class="" href="07-samoraskrutka.html">Self-hosting and the fixed point</a><a class="" href="08-izmereno.html">What we measured and what we found</a><a href="../../lab.html" style="margin-top:14px">→ Labs</a></nav>
+<article><h1>The language: Oberon in one chapter</h1>
+<p>Oberon is Wirth's last language, heir to Pascal and Modula-2. Its 2007
+revision, the one this system runs, is meant to be a language that fits in one
+head entire: <strong>thirty-three keywords</strong> and a little over forty built-in names.
+For comparison, C++ has about a hundred keywords.</p>
+<p>What follows is not a full description but a working minimum: enough to read
+the system's sources and write your own modules.</p>
+<h2>A whole module</h2>
+<p>Here is a real module from this system's disk — it blinks an LED on the
+board:</p>
+<pre><code class="language-oberon">MODULE Blink;
+  IMPORT SYSTEM, Oberon;
+  VAR z: INTEGER;
+    T: Oberon.Task;
+
+  PROCEDURE Run*;
+  BEGIN Oberon.Install(T)
+  END Run;
+
+  PROCEDURE Stop*;
+  BEGIN Oberon.Remove(T)
+  END Stop;
+
+  PROCEDURE Tick;
+  BEGIN z := 1 - z; LED(z)
+  END Tick;
+
+BEGIN z := 0; T := Oberon.NewTask(Tick, 500)
+END Blink.
+</code></pre>
+<p>Almost the whole shape of the language is visible here.</p>
+<p><strong>A module</strong> is the unit of compilation and the unit of loading. Its body —
+between the last <code>BEGIN</code> and <code>END</code> — runs once, when it is loaded.</p>
+<p><strong>A star</strong> after a name means export. <code>Run*</code> is visible from outside, <code>Tick</code> is
+not. That is the entire visibility mechanism: no <code>public</code>, no <code>private</code>, no
+header files, no export lists.</p>
+<p><strong>The module's name is repeated</strong> after the final <code>END</code> and followed by a full
+stop. The compiler checks it.</p>
+<h2>Keywords</h2>
+<p>All thirty-three:</p>
+<pre><code>ARRAY BEGIN BY CASE CONST DIV DO ELSE ELSIF END FALSE FOR IF IMPORT
+IN IS MOD MODULE NIL OF OR POINTER PROCEDURE RECORD REPEAT RETURN
+THEN TO TRUE TYPE UNTIL VAR WHILE
+</code></pre>
+<p>Note what is absent: <code>class</code>, <code>try</code>, <code>catch</code>, <code>throw</code>, <code>template</code>,
+<code>interface</code>, <code>async</code>, <code>private</code>. None of it is in the language — and that is a
+deliberate choice, not poverty.</p>
+<h2>Types</h2>
+<p>The basic ones: <code>INTEGER</code>, <code>REAL</code>, <code>BOOLEAN</code>, <code>CHAR</code>, <code>BYTE</code>, <code>SET</code>.</p>
+<p><code>SET</code> is a set of 32 elements, one bit each, with <code>+</code> (union), <code>*</code>
+(intersection), <code>-</code> (difference) and the <code>IN</code> test. Cheap and very expressive;
+the system uses it constantly, for the state of the mouse buttons among other
+things.</p>
+<p>The compound ones:</p>
+<pre><code class="language-oberon">TYPE
+  Name = ARRAY 32 OF CHAR;
+  Point = RECORD x, y: INTEGER END;
+  Node = POINTER TO NodeDesc;
+  NodeDesc = RECORD key: INTEGER; next: Node END;
+
+  Shape = RECORD x, y: INTEGER END;
+  Circle = RECORD (Shape) r: INTEGER END;     (* record extension *)
+</code></pre>
+<p>Records extend — that is all the inheritance the language has. A run-time type
+test is <code>IS</code>, a cast is <code>v(Circle)</code>. There are no virtual methods: instead a
+variable of procedure type is placed in the record. That is exactly how every
+"object" in this system is built.</p>
+<p>Arrays come with a fixed length (<code>ARRAY 32 OF CHAR</code>) or open, only as procedure
+parameters (<code>ARRAY OF CHAR</code>); <code>LEN</code> gives their length.</p>
+<h2>Statements</h2>
+<p>Assignment is <code>:=</code>, comparison <code>=</code> and <code>#</code>. Integer division is <code>DIV</code> and
+<code>MOD</code>, real division <code>/</code>.</p>
+<pre><code class="language-oberon">IF x &gt; 0 THEN y := 1 ELSIF x &lt; 0 THEN y := -1 ELSE y := 0 END;
+
+WHILE i &lt; n DO s := s + a[i]; INC(i) END;
+
+REPEAT ch := Read() UNTIL ch = 0X;
+
+FOR i := 0 TO n-1 DO a[i] := 0 END;
+
+CASE ch OF
+  &quot;a&quot;..&quot;z&quot;: Small(ch)
+| &quot;0&quot;..&quot;9&quot;: Digit(ch)
+ELSE Other(ch)
+END
+</code></pre>
+<p>Every construct closes with its own <code>END</code>. There are no braces, no dangling
+<code>else</code>, and the semicolon is a <strong>separator</strong> rather than a terminator: it is
+not wanted before <code>END</code>.</p>
+<h2>Procedures</h2>
+<pre><code class="language-oberon">PROCEDURE Add(a, b: INTEGER): INTEGER;
+BEGIN RETURN a + b
+END Add;
+
+PROCEDURE Swap(VAR a, b: INTEGER);
+  VAR t: INTEGER;
+BEGIN t := a; a := b; b := t
+END Swap;
+</code></pre>
+<p>A parameter marked <code>VAR</code> is passed by reference, one without by value. Local
+declarations go between the heading and <code>BEGIN</code>. Nested procedures are allowed
+and see the enclosing procedure's variables.</p>
+<p><code>RETURN</code> in a function is the <strong>last statement</strong> — there is no leaving from the
+middle. This is inconvenient right up to the moment you have to read somebody
+else's code.</p>
+<h2>Built-in procedures</h2>
+<p>There are a little over forty, and almost all are one line:</p>
+<table>
+<thead><tr><th></th><th></th></tr></thead>
+<tbody>
+<tr><td><code>INC DEC</code></td><td>increment, decrement</td></tr>
+<tr><td><code>INCL EXCL</code></td><td>add, remove a set element</td></tr>
+<tr><td><code>LEN</code></td><td>length of an open array</td></tr>
+<tr><td><code>ORD CHR</code></td><td>character ↔ code</td></tr>
+<tr><td><code>ABS ODD</code></td><td>magnitude, oddness</td></tr>
+<tr><td><code>FLOOR FLT</code></td><td>real ↔ integer</td></tr>
+<tr><td><code>PACK UNPK</code></td><td>take a real apart and put it back together</td></tr>
+<tr><td><code>NEW</code></td><td>allocate for a pointer</td></tr>
+<tr><td><code>ASSERT</code></td><td>a check; a trap if false</td></tr>
+<tr><td><code>LED</code></td><td>light the LEDs on the board</td></tr>
+</tbody>
+</table>
+<p>The pseudo-module <code>SYSTEM</code> stands apart: <code>ADR</code>, <code>VAL</code>, <code>GET</code>, <code>PUT</code>, <code>COPY</code>,
+<code>BIT</code>, <code>H</code>, <code>SIZE</code>. It is the door out of a type-safe language, and the drivers
+and the garbage collector are written through it. A module that imports
+<code>SYSTEM</code> is marked specially by the compiler, and it shows in its source on the
+first line.</p>
+<h2>What the language lacks, and why</h2>
+<p><strong>No exceptions.</strong> A run-time error is a trap: it prints the position and
+stops the command. A program does not wrap <code>try</code> around everything.</p>
+<p><strong>No overloading</strong> — neither of operators nor of procedure names. A name means
+exactly one thing.</p>
+<p><strong>No generics.</strong> A container is written either for a concrete type or through
+record extension.</p>
+<p><strong>No preprocessor, macros or conditional compilation.</strong> The text you see is
+the text that compiles.</p>
+<p><strong>No header files.</strong> The compiler extracts a module's interface from the module
+itself; how, is in the chapter on <a href="05-moduli.html">modules</a>.</p>
+<p>The language was designed under one constraint: a compiler for it had to be
+writable by one person in a foreseeable time. The check is simple — the whole
+Oberon compiler is four modules and a hundred and nine kilobytes of source. Which
+modules those are is taken apart in the chapter on the
+<a href="06-kompilyator.html">compiler</a>.</p><div class="foot"><span><a href="02-mashina.html">← The machine: RISC5</a></span><span><a href="04-sistema.html">The system: text instead of buttons →</a></span></div>
+
+</article>
+</div>

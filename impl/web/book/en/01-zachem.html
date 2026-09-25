@@ -1,0 +1,110 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>What this is for, and what here is real</title>
+<style>
+:root { color-scheme: light dark; --bg:#f6f6f4; --fg:#1a1a1a; --mut:#666;
+        --line:#d8d8d4; --acc:#2b5fa8; --code:#eceae5; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#16181c; --fg:#e6e6e6; --mut:#9aa0a6; --line:#2e3238;
+          --acc:#7aa7e8; --code:#20242a; } }
+* { box-sizing:border-box }
+body { margin:0; background:var(--bg); color:var(--fg);
+       font:16px/1.65 ui-serif,Georgia,"Times New Roman",serif; }
+.wrap { display:grid; grid-template-columns:240px minmax(0,72ch); gap:40px;
+        max-width:1100px; margin:0 auto; padding:28px 20px 80px }
+@media (max-width:900px) { .wrap { grid-template-columns:1fr; gap:16px } }
+nav { position:sticky; top:20px; align-self:start;
+      font:13px/1.5 ui-sans-serif,system-ui,sans-serif }
+nav a { display:block; padding:3px 0; color:var(--mut); text-decoration:none }
+nav a:hover { color:var(--acc) }
+nav a.cur { color:var(--fg); font-weight:600 }
+nav .top { font-weight:600; color:var(--fg); margin-bottom:10px; display:block }
+h1 { font-size:26px; line-height:1.25; margin:0 0 24px }
+h2 { font-size:20px; margin:32px 0 10px }
+h3 { font-size:17px; margin:24px 0 8px }
+p, li { margin:0 0 12px }
+ul, ol { padding-left:24px }
+a { color:var(--acc) }
+code { font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+       background:var(--code); padding:1px 4px; border-radius:3px }
+pre { background:var(--code); padding:12px 14px; border-radius:7px;
+      overflow-x:auto; border:1px solid var(--line) }
+pre code { background:none; padding:0; font-size:12.5px }
+table { border-collapse:collapse; width:100%; font-size:14px; margin:0 0 16px;
+        display:block; overflow-x:auto }
+th, td { border:1px solid var(--line); padding:6px 9px; text-align:left }
+th { background:var(--code) }
+blockquote { margin:0 0 14px; padding:8px 14px; border-left:3px solid var(--line);
+             color:var(--mut) }
+.foot { margin-top:48px; padding-top:16px; border-top:1px solid var(--line);
+        display:flex; justify-content:space-between;
+        font:14px ui-sans-serif,system-ui,sans-serif }
+</style>
+<div class="wrap">
+<nav><a class="top" href="index.html">Oberon: the handbook</a><a class="cur" href="01-zachem.html">What this is for, and what here is real</a><a class="" href="02-mashina.html">The machine: RISC5</a><a class="" href="03-yazyk.html">The language: Oberon in one chapter</a><a class="" href="04-sistema.html">The system: text instead of buttons</a><a class="" href="05-moduli.html">Modules, symbol files and keys</a><a class="" href="06-kompilyator.html">The compiler from inside</a><a class="" href="07-samoraskrutka.html">Self-hosting and the fixed point</a><a class="" href="08-izmereno.html">What we measured and what we found</a><a href="../../lab.html" style="margin-top:14px">→ Labs</a></nav>
+<article><h1>What this is for, and what here is real</h1>
+<p>This handbook accompanies a set of labs in which you work with an operating
+system from 1986, running on a processor described in Verilog. In a browser,
+with nothing to install.</p>
+<p>Before going further it is worth agreeing on what exactly is real here and
+what is imitation. In retrocomputing projects this is usually left vague, and
+it should not be.</p>
+<h2>What is real</h2>
+<p><strong>The processor.</strong> Under the page runs <code>RISC5.v</code> — Niklaus Wirth's
+synthesisable Verilog, stepped cycle by cycle by the Verilator simulator. This
+is not a model of a processor and not an emulator: it is the very code that
+gets programmed into an FPGA. When you see the cursor blinking on screen, real
+logic drew it, simulated to the cycle.</p>
+<p><strong>The system.</strong> Project Oberon is the operating system Wirth and Jürg
+Gutknecht wrote in 1986 and rewrote for their own processor in 2013. All of it,
+together with the compiler, the window environment and the text editor, comes to
+about ten thousand lines.</p>
+<p><strong>The compiler.</strong> The Oberon compiler is written in Oberon and sits on the
+same disk as everything else. In lab 7 you will run it and it will build
+itself.</p>
+<h2>What is not real</h2>
+<p><strong>The peripherals.</strong> Disk, keyboard and mouse are modelled in C++ and
+JavaScript. A real board talks to an SD card over SPI and to a keyboard over
+PS/2; here those protocols are reproduced in software. The processor does not
+know the difference — it sees the same registers at the same addresses.</p>
+<p><strong>The speed.</strong> Simulation gives roughly four megahertz equivalent, about
+four times slower than a real board. Booting takes a couple of seconds.</p>
+<h2>Why this can be believed</h2>
+<p>Claiming "we have a real processor" is easy. Checking it is hard. So
+everything you will see is verified by machine, and the checks live in the same
+repository:</p>
+<ul>
+<li><strong>The boot is verified by a checksum of the screen.</strong> After twelve million
+  instructions the framebuffer gives <code>B5DFC933</code> — identically in the native
+  build, in the build with the disk in memory, and in the browser.</li>
+<li><strong>Step for step against an independent emulator.</strong> Fourteen and a half
+  million instructions are compared against Peter De Wachter's emulator across
+  all registers, flags and memory contents. Not one divergence.</li>
+<li><strong>The compiler reaches a fixed point.</strong> A compiler built by itself produces
+  the same code sizes and the same keys, bit for bit.</li>
+<li><strong>The whole system rebuilds itself.</strong> Thirty-seven object files match the
+  originals byte for byte after a rebuild.</li>
+</ul>
+<p>The last point is worth dwelling on. It means this is not a museum piece but a
+closed system: a description of a processor produces the processor, the
+processor runs the system, the system contains the compiler, the compiler
+produces the system itself. The circle closes, and one command checks it.</p>
+<h2>How to read on</h2>
+<p>The chapters are as independent as they can be, but the order is not
+accidental:</p>
+<ul>
+<li><a href="02-mashina.html">The machine</a> — what RISC5 is: registers, instructions, memory.</li>
+<li><a href="03-yazyk.html">The language</a> — Oberon entire, in one chapter. It really does fit.</li>
+<li><a href="04-sistema.html">The system</a> — the least familiar part: there are no buttons,
+  the whole interface is text, and commands are run with the middle mouse button.</li>
+<li><a href="05-moduli.html">Modules</a> — separate compilation and symbol files.</li>
+<li><a href="06-kompilyator.html">The compiler</a> — four modules and the path from <code>a[i]</code> to instructions.</li>
+<li><a href="07-samoraskrutka.html">Self-hosting</a> — what a fixed point proves.</li>
+<li><a href="08-izmereno.html">What we measured</a> — figures and findings that are not in the books.</li>
+</ul>
+<p>If you would rather touch it straight away, start with lab 1: it needs nothing
+but a browser.</p><div class="foot"><span></span><span><a href="02-mashina.html">The machine: RISC5 →</a></span></div>
+
+</article>
+</div>

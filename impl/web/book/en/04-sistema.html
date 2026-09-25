@@ -1,0 +1,134 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The system: text instead of buttons</title>
+<style>
+:root { color-scheme: light dark; --bg:#f6f6f4; --fg:#1a1a1a; --mut:#666;
+        --line:#d8d8d4; --acc:#2b5fa8; --code:#eceae5; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#16181c; --fg:#e6e6e6; --mut:#9aa0a6; --line:#2e3238;
+          --acc:#7aa7e8; --code:#20242a; } }
+* { box-sizing:border-box }
+body { margin:0; background:var(--bg); color:var(--fg);
+       font:16px/1.65 ui-serif,Georgia,"Times New Roman",serif; }
+.wrap { display:grid; grid-template-columns:240px minmax(0,72ch); gap:40px;
+        max-width:1100px; margin:0 auto; padding:28px 20px 80px }
+@media (max-width:900px) { .wrap { grid-template-columns:1fr; gap:16px } }
+nav { position:sticky; top:20px; align-self:start;
+      font:13px/1.5 ui-sans-serif,system-ui,sans-serif }
+nav a { display:block; padding:3px 0; color:var(--mut); text-decoration:none }
+nav a:hover { color:var(--acc) }
+nav a.cur { color:var(--fg); font-weight:600 }
+nav .top { font-weight:600; color:var(--fg); margin-bottom:10px; display:block }
+h1 { font-size:26px; line-height:1.25; margin:0 0 24px }
+h2 { font-size:20px; margin:32px 0 10px }
+h3 { font-size:17px; margin:24px 0 8px }
+p, li { margin:0 0 12px }
+ul, ol { padding-left:24px }
+a { color:var(--acc) }
+code { font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+       background:var(--code); padding:1px 4px; border-radius:3px }
+pre { background:var(--code); padding:12px 14px; border-radius:7px;
+      overflow-x:auto; border:1px solid var(--line) }
+pre code { background:none; padding:0; font-size:12.5px }
+table { border-collapse:collapse; width:100%; font-size:14px; margin:0 0 16px;
+        display:block; overflow-x:auto }
+th, td { border:1px solid var(--line); padding:6px 9px; text-align:left }
+th { background:var(--code) }
+blockquote { margin:0 0 14px; padding:8px 14px; border-left:3px solid var(--line);
+             color:var(--mut) }
+.foot { margin-top:48px; padding-top:16px; border-top:1px solid var(--line);
+        display:flex; justify-content:space-between;
+        font:14px ui-sans-serif,system-ui,sans-serif }
+</style>
+<div class="wrap">
+<nav><a class="top" href="index.html">Oberon: the handbook</a><a class="" href="01-zachem.html">What this is for, and what here is real</a><a class="" href="02-mashina.html">The machine: RISC5</a><a class="" href="03-yazyk.html">The language: Oberon in one chapter</a><a class="cur" href="04-sistema.html">The system: text instead of buttons</a><a class="" href="05-moduli.html">Modules, symbol files and keys</a><a class="" href="06-kompilyator.html">The compiler from inside</a><a class="" href="07-samoraskrutka.html">Self-hosting and the fixed point</a><a class="" href="08-izmereno.html">What we measured and what we found</a><a href="../../lab.html" style="margin-top:14px">→ Labs</a></nav>
+<article><h1>The system: text instead of buttons</h1>
+<p>The least familiar thing about Oberon is neither the language nor the
+processor but the interface. There are no buttons, menus, dialogues or icons.
+There is text, and any text can be executed.</p>
+<p>This chapter is worth reading before the first lab; without it the system
+looks broken.</p>
+<h2>The middle button executes</h2>
+<p>The basic rule: <strong>a middle click on a word of the form <code>Module.Procedure</code> runs
+that procedure</strong>. Not a button, not a menu entry — any such word, wherever it
+happens to be written: in the command list, in a letter, in a comment, in text
+you typed yourself a moment ago.</p>
+<p>On a mouse without a middle button, Alt with the left one stands in for it.</p>
+<p>From this follows the thing that throws people at first: the system draws no
+distinction between a "document" and a "toolbar". The lower right area with the
+text <code>System.Open</code>, <code>ORP.Compile</code>, <code>Tools.Inspect</code> is an ordinary text file
+called <code>System.Tool</code>. You can edit it, add your own commands to it and save it.
+What you typed yourself works exactly as what came with the system.</p>
+<h2>Three buttons</h2>
+<p>Each mouse button does its own thing:</p>
+<table>
+<thead><tr><th>button</th><th>action</th></tr></thead>
+<tbody>
+<tr><td>left</td><td>place the caret (the insertion point)</td></tr>
+<tr><td>middle</td><td>execute the command under the pointer</td></tr>
+<tr><td>right</td><td>select text by dragging</td></tr>
+</tbody>
+</table>
+<p>The selection and the caret are different things and exist at the same time.
+This matters: many commands take their argument from the <strong>selection</strong> and put
+the result where the <strong>caret</strong> stands.</p>
+<h2>The arrow and the tilde</h2>
+<p>Two hint marks appear in the command list.</p>
+<p>An arrow <code>↑</code> after a command name means the argument comes from the current
+selection. <code>System.Directory ↑</code> — select a pattern such as <code>*.Mod</code>, then click
+the command.</p>
+<p>A tilde <code>~</code> closes the parameter list. <code>ORP.Compile Math.Mod/s ~</code> — command,
+file name, option, tilde. Without the tilde the command reads too far and will
+most likely complain.</p>
+<h2>Windows</h2>
+<p>The screen is divided into vertical tracks, each holding a stack of windows.
+Every window has its own black title strip, and in it the commands that concern
+that window:</p>
+<pre><code>System.Log | Edit.Locate Edit.Search System.Copy System.Grow System.Clear
+</code></pre>
+<p><code>System.Close</code> closes, <code>System.Grow</code> enlarges, <code>Edit.Store</code> saves. It is the
+same mechanism: the words in the strip are ordinary text, executed with a middle
+click.</p>
+<p>Two windows are open right after booting. Above is <strong>System.Log</strong>, where all
+messages go: compilation results, errors, reports from commands. Below is
+<strong>System.Tool</strong>, the command list.</p>
+<p>The log has a quirk worth knowing in advance: it shows text from the beginning
+and <strong>does not scroll itself</strong>. If the output runs longer than about eighteen
+lines, the tail is simply not visible even though the command finished.
+<code>System.Clear</code> in its title strip empties the log — use it between
+experiments.</p>
+<h2>The ordinary way of working</h2>
+<p>To compile a module:</p>
+<ol>
+<li>place the caret at the end of <code>System.Tool</code> with a left click;</li>
+<li>type <code>ORP.Compile Name.Mod/s ~</code>;</li>
+<li>run it with a middle click on what you typed.</li>
+</ol>
+<p>A line like this appears in the log:</p>
+<pre><code>compiling Math  447     0 32C32F12
+</code></pre>
+<p>That is the module name, the code size in words, the data size in bytes and the
+interface key. The key is covered in the chapter on
+<a href="05-moduli.html">modules</a>.</p>
+<p>The <code>/s</code> option permits overwriting the symbol file. Without it the compiler
+refuses to change the interface of a module something else depends on.</p>
+<p>To open a file for editing: <code>Edit.Open Name.Mod</code>; to save it: <code>Edit.Store</code> in
+the window's title strip.</p>
+<h2>One thing that surprises</h2>
+<p>The system is single-tasking in the sense that a command runs to completion and
+the interface does not respond meanwhile. But the garbage collector runs between
+commands — and only between them.</p>
+<p>You will meet the practical consequence straight away: ask the compiler to build
+several large modules in <strong>one</strong> command and the symbol tables accumulate until
+the heap runs out. You get</p>
+<pre><code>pos 6734  TRAP  4 in ORB at 0001EC10
+</code></pre>
+<p>That is not a broken compiler and not a mistake in your code: trap 4 is a <code>NIL</code>
+dereference, and <code>NIL</code> is what the allocation returned. The same modules, built
+one per command, go through without a complaint.</p>
+<p>We walked into this twice: first building the compiler, then rebuilding the
+whole system. The rule is simple — <strong>one large module per command</strong>.</p><div class="foot"><span><a href="03-yazyk.html">← The language: Oberon in one chapter</a></span><span><a href="05-moduli.html">Modules, symbol files and keys →</a></span></div>
+
+</article>
+</div>

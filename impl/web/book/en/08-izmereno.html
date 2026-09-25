@@ -1,0 +1,150 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>What we measured and what we found</title>
+<style>
+:root { color-scheme: light dark; --bg:#f6f6f4; --fg:#1a1a1a; --mut:#666;
+        --line:#d8d8d4; --acc:#2b5fa8; --code:#eceae5; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#16181c; --fg:#e6e6e6; --mut:#9aa0a6; --line:#2e3238;
+          --acc:#7aa7e8; --code:#20242a; } }
+* { box-sizing:border-box }
+body { margin:0; background:var(--bg); color:var(--fg);
+       font:16px/1.65 ui-serif,Georgia,"Times New Roman",serif; }
+.wrap { display:grid; grid-template-columns:240px minmax(0,72ch); gap:40px;
+        max-width:1100px; margin:0 auto; padding:28px 20px 80px }
+@media (max-width:900px) { .wrap { grid-template-columns:1fr; gap:16px } }
+nav { position:sticky; top:20px; align-self:start;
+      font:13px/1.5 ui-sans-serif,system-ui,sans-serif }
+nav a { display:block; padding:3px 0; color:var(--mut); text-decoration:none }
+nav a:hover { color:var(--acc) }
+nav a.cur { color:var(--fg); font-weight:600 }
+nav .top { font-weight:600; color:var(--fg); margin-bottom:10px; display:block }
+h1 { font-size:26px; line-height:1.25; margin:0 0 24px }
+h2 { font-size:20px; margin:32px 0 10px }
+h3 { font-size:17px; margin:24px 0 8px }
+p, li { margin:0 0 12px }
+ul, ol { padding-left:24px }
+a { color:var(--acc) }
+code { font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+       background:var(--code); padding:1px 4px; border-radius:3px }
+pre { background:var(--code); padding:12px 14px; border-radius:7px;
+      overflow-x:auto; border:1px solid var(--line) }
+pre code { background:none; padding:0; font-size:12.5px }
+table { border-collapse:collapse; width:100%; font-size:14px; margin:0 0 16px;
+        display:block; overflow-x:auto }
+th, td { border:1px solid var(--line); padding:6px 9px; text-align:left }
+th { background:var(--code) }
+blockquote { margin:0 0 14px; padding:8px 14px; border-left:3px solid var(--line);
+             color:var(--mut) }
+.foot { margin-top:48px; padding-top:16px; border-top:1px solid var(--line);
+        display:flex; justify-content:space-between;
+        font:14px ui-sans-serif,system-ui,sans-serif }
+</style>
+<div class="wrap">
+<nav><a class="top" href="index.html">Oberon: the handbook</a><a class="" href="01-zachem.html">What this is for, and what here is real</a><a class="" href="02-mashina.html">The machine: RISC5</a><a class="" href="03-yazyk.html">The language: Oberon in one chapter</a><a class="" href="04-sistema.html">The system: text instead of buttons</a><a class="" href="05-moduli.html">Modules, symbol files and keys</a><a class="" href="06-kompilyator.html">The compiler from inside</a><a class="" href="07-samoraskrutka.html">Self-hosting and the fixed point</a><a class="cur" href="08-izmereno.html">What we measured and what we found</a><a href="../../lab.html" style="margin-top:14px">→ Labs</a></nav>
+<article><h1>What we measured and what we found</h1>
+<p>This chapter is not about Oberon as such but about what can be learnt when a
+whole system fits on a desk: the sources, the compiler, the processor's
+description, and a way to run and measure all of it.</p>
+<h2>What an array bounds check costs</h2>
+<p>An old question, usually settled at the level of opinion. Here it can be closed
+with a number.</p>
+<p>The Oberon code generator inserts two instructions before every index operation
+with a variable subscript: a comparison and a conditional branch. In <code>ORG.Mod</code>
+this is switched by a single constant, <code>check</code>. So three compilers can be built
+— without checks, with software checks, and with a hardware instruction — and
+the same workload run through each.</p>
+<p>The subtlety that usually makes such measurements lie: a compiler without checks
+not only <strong>does not contain</strong> them, it also <strong>does not emit</strong> them. The
+difference then is not "the cost of executing checks" but a mixture of two
+different things. So at a second stage all three compilers are built from one
+and the same reference source — then the code they emit is bit-identical and
+only what is inside them differs.</p>
+<p>The result, building five modules of the system:</p>
+<table>
+<thead><tr><th>configuration</th><th>cycles</th><th>instructions</th></tr></thead>
+<tbody>
+<tr><td>no checks</td><td>29,277,745</td><td>17,508,073</td></tr>
+<tr><td>software checks</td><td>+2.19%</td><td>+3.33%</td></tr>
+<tr><td>hardware instruction</td><td>+1.85%</td><td>+2.78%</td></tr>
+</tbody>
+</table>
+<p>Two conclusions. First: <strong>a bounds check costs about two per cent</strong>, not the
+tens of per cent commonly assumed. Second: hardware support removes only about a
+sixth of that cost (15.5%), because the check itself is two cheap instructions
+rather than work with memory.</p>
+<p>The same 2.19% was obtained independently, by decomposing four builds in a
+two-by-two arrangement. Two different methods gave one number.</p>
+<h2>The hardware check: where to fit it</h2>
+<p>Measuring the third row meant adding an instruction to the processor. That is
+instructive in itself.</p>
+<p>RISC5 has no free opcodes — all sixteen operations are taken. A crack was found:
+format <code>F0</code>, <code>v=1</code>, <code>op=1</code>. That is an alias of left shift which the compiler
+never emits, because for shifts it always sets <code>v=0</code>. We did not assume those
+bits were free; we checked by sweeping every value of the field through the real
+decoder.</p>
+<p>The limit had to be cut into two pieces — bits 27–24 and 15–8 — because no
+contiguous twelve-bit field exists. The decision was made from data: a dynamic
+profile showed that <strong>68.3% of executed checks are on arrays of length
+256…1023</strong>, which eight bits cannot cover. And the familiar figure "the median
+array length is 32" turned out to be an artefact: that is <code>ARRAY 32 OF CHAR</code>,
+the file-name type, which appears in declarations often and executes in hot code
+almost never.</p>
+<p>The cost in silicon: from 46 to 123 square microns on the Nangate45 library,
+that is from 58 to 154 gate equivalents. The lower bound lies inside the noise
+of the synthesis route, which is to say indistinguishable from zero. On
+frequency the sign of the effect could not be determined honestly: different
+routes give it different signs.</p>
+<h2>Three parts of Project Oberon disagree with each other</h2>
+<p>The most unexpected finding. The width of the displacement field in a branch
+instruction:</p>
+<table>
+<thead><tr><th>source</th><th>expression</th><th>width</th></tr></thead>
+<tbody>
+<tr><td><code>ORG.Mod</code>, the code generator</td><td><code>off MOD 1000000H</code></td><td>24 bits</td></tr>
+<tr><td><code>RISC5.v</code>, the hardware</td><td><code>disp = IR[21:0]</code></td><td>22 bits</td></tr>
+<tr><td><code>ORTool.Mod</code>, the disassembler</td><td><code>w MOD 100000H</code></td><td>20 bits</td></tr>
+</tbody>
+</table>
+<p>Three parts of one system, written by one person, disagree about the width of
+one field. There are no practical consequences: the address space is one
+megabyte, eighteen bits in words, and nothing reaches the disputed bits. All
+three agree where it matters.</p>
+<p>The condition table in the disassembler <code>ORTool.Mod</code>, on the other hand, is
+simply <strong>wrong</strong>: eleven of sixteen indices are filled in and two of them
+contradict the hardware — where the processor tests carry, the disassembler
+prints "lower or same". This is checked by execution: take the layout from
+<code>ORTool</code> and four of a hundred and twelve conditional-branch checks fail on the
+hardware.</p>
+<p>The moral is the one from the previous chapter: <strong>the hardware is right, not the
+documentation and not the tools</strong>.</p>
+<h2>How exactly timing can be predicted</h2>
+<p>RISC5 has no cache, no branch prediction, no out-of-order execution. Execution
+time should therefore follow from a table.</p>
+<p>We wrote such a table and checked it against twelve million real instructions
+during boot: <strong>not one divergence</strong>. This is a property modern processors do not
+have and will not have, and the reason machines like this are still used for
+real-time work.</p>
+<h2>What all of it is verified by</h2>
+<p>For the numbers to be believable, the instrumentation is verified separately:</p>
+<ul>
+<li><strong>step for step against an independent emulator</strong> — 14.6 million instructions,
+  comparing all registers, flags, the <code>H</code> register and the whole of memory;</li>
+<li><strong>decoder equivalence</strong> — 20,480 encoding combinations run through two
+  variants of the core, and exactly one diverges: the one we added;</li>
+<li><strong>a round trip on the compiler's real output</strong> — 33,838 words of code are
+  taken apart by the disassembler and put back together, requiring a bit-exact
+  match;</li>
+<li><strong>a semantic differential</strong> — 4,650 checks: an independently written model of
+  the arithmetic is compared against the hardware on the result, all four flags
+  and the <code>H</code> register.</li>
+</ul>
+<p>And above all of it, a rule we arrived at the hard way: every check must be
+tried by breaking. We break the model, break the tables, break the encodings —
+and watch whether it turns red. Three times during this work a check proved
+green on a broken input, and each time that mattered more than the check
+itself.</p><div class="foot"><span><a href="07-samoraskrutka.html">← Self-hosting and the fixed point</a></span><span></span></div>
+
+</article>
+</div>
