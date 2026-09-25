@@ -32,6 +32,8 @@ typedef struct DisasContext {
     uint32_t opcode;
     /* Счётчик следующей команды, В СЛОВАХ — как в железе. */
     uint32_t npc_w;
+    /* Вариант железа: есть ли аппаратная проверка границ (см. cpu.h). */
+    bool chk;
 } DisasContext;
 
 /*
@@ -284,6 +286,50 @@ static bool trans_F0_rrr(DisasContext *ctx, arg_F0_rrr *r)
     return true;
 }
 
+/*
+ * CHK — аппаратная проверка границ массива.
+ *
+ * Семантика снята с RISC5.v дословно:
+ *   chkFail = CHK & (B >= chkLim)        беззнаковое сравнение
+ *   при срабатывании regmux = {8'b0, nxpc, 2'b0}, ira0 = 15, pcmux0 = C0[23:2]
+ *   то есть РОВНО то же, что делает BLR: R15 := PC+4 ; PC := R[c]
+ *   при несрабатывании не пишется ни регистр, ни признаки
+ *
+ * Признаки при срабатывании ставятся по общему правилу «пишем регистр —
+ * ставим N и Z» (RISC5.v:204): адрес возврата неотрицателен, поэтому N = 0,
+ * а Z — только если адрес нулевой.
+ *
+ * На базовом ядре этой команды НЕТ: там та же кодировка декодируется как
+ * регистр-регистровая форма (алиас LSL с v=1). Поэтому при выключенном
+ * расширении сюда приходить нельзя — отдаём разбор обратно F0.
+ */
+static bool trans_CHK(DisasContext *ctx, arg_chk *r)
+{
+    TCGLabel *ok;
+    uint32_t lnk;
+
+    if (!ctx->chk) {
+        /* Поля те же биты: op = 1 (LSL), u = 0, v = 1, a = IR[27:24]. */
+        gen_alu(ctx, extract32(ctx->opcode, 24, 4), r->b, 1, 0, 1, false,
+                r->c, 0);
+        return true;
+    }
+
+    ok = gen_new_label();
+    tcg_gen_brcondi_i32(TCG_COND_LTU, cpu_r[r->b], r->lim, ok);
+
+    lnk = (ctx->npc_w * 4) & 0x00FFFFFF;
+    tcg_gen_movi_i32(cpu_r[RISC5_REG_LNK], lnk);
+    tcg_gen_movi_i32(cpu_n, 0);
+    tcg_gen_movi_i32(cpu_z, lnk == 0);
+
+    tcg_gen_shri_i32(cpu_pc, cpu_r[r->c], 2);
+    tcg_gen_exit_tb(NULL, 0);
+
+    gen_set_label(ok);
+    return true;
+}
+
 static bool trans_F1_rri(DisasContext *ctx, arg_F1_rri *r)
 {
     gen_alu(ctx, r->a, r->b, r->op, r->u, r->v, true, 0, r->imm);
@@ -422,6 +468,7 @@ static void risc5_tr_init_disas_context(DisasContextBase *dcbase, CPUState *cs)
 {
     DisasContext *ctx = container_of(dcbase, DisasContext, base);
     ctx->npc_w = ctx->base.pc_first / 4;
+    ctx->chk = cpu_env(cs)->chk;
 }
 
 static void risc5_tr_tb_start(DisasContextBase *db, CPUState *cs)

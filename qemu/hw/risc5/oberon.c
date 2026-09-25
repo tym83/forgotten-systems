@@ -38,6 +38,30 @@
 #define OBERON_ROM_BASE  0xFFE000
 #define OBERON_ROM_SIZE  0x000800
 
+/*
+ * Вариант железа. Расширение системы команд — это не «режим эмулятора»,
+ * а другая сборка процессора: в RTL оно включается -DWITH_CHK. Здесь тем же
+ * смыслом обладает свойство машины:
+ *
+ *   -machine oberon,chk=on
+ *
+ * По умолчанию выключено: базовая машина обязана вести себя ровно как ядро
+ * Вирта без расширений, иначе сверка с RTL перестаёт что-либо значить.
+ *
+ * Свойство статическое: машина в процессе одна, а выбор делается до запуска.
+ */
+static bool oberon_chk;
+
+static bool oberon_get_chk(Object *obj, Error **errp)
+{
+    return oberon_chk;
+}
+
+static void oberon_set_chk(Object *obj, bool value, Error **errp)
+{
+    oberon_chk = value;
+}
+
 static void oberon_init(MachineState *machine)
 {
     MemoryRegion *sys = get_system_memory();
@@ -46,6 +70,7 @@ static void oberon_init(MachineState *machine)
     RISC5CPU *cpu;
 
     cpu = RISC5_CPU(cpu_create(machine->cpu_type));
+    cpu->env.chk = oberon_chk;
 
     memory_region_init_ram(ram, NULL, "oberon.ram", OBERON_RAM_SIZE,
                            &error_fatal);
@@ -122,6 +147,11 @@ static void oberon_machine_init(MachineClass *mc)
     mc->no_parallel = 1;
     mc->no_floppy = 1;
     mc->no_cdrom = 1;
+
+    object_class_property_add_bool(OBJECT_CLASS(mc), "chk",
+                                   oberon_get_chk, oberon_set_chk);
+    object_class_property_set_description(OBJECT_CLASS(mc), "chk",
+        "аппаратная проверка границ массива (как -DWITH_CHK в RTL)");
 }
 
 DEFINE_MACHINE("oberon", oberon_machine_init)
