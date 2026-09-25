@@ -1,6 +1,6 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Project Oberon на настоящем RTL</title>
+<title data-i18n-en="Project Oberon on real RTL">Project Oberon на настоящем RTL</title>
 <style>
   html, body { height:100% }
   body { margin:0; background:#1b1b1b; color:#ddd; font:14px/1.5 system-ui,sans-serif;
@@ -27,26 +27,29 @@
 </style>
 
 <header>
-  <h1>Project Oberon — ядро RISC5 на настоящем Verilog</h1>
-  <div id="stat">загрузка…</div>
-  <label class="stat" style="margin-left:auto;font-size:12px;color:#8a8a8a">мышь
+  <h1 data-i18n-en="Project Oberon — the RISC5 core on real Verilog">Project Oberon — ядро RISC5 на настоящем Verilog</h1>
+  <div id="stat"></div>
+  <label class="stat" style="margin-left:auto;font-size:12px;color:#8a8a8a"><span data-i18n-en="mouse">мышь</span>
     <select id="btn" style="font:inherit;background:#222;color:#ddd;border:1px solid #333;border-radius:5px;padding:3px 6px">
-      <option value="4">левая — курсор</option>
-      <option value="2">средняя — запускает</option>
-      <option value="1">правая — выделяет</option>
+      <option value="4" data-i18n-en="left — caret">левая — курсор</option>
+      <option value="2" data-i18n-en="middle — runs">средняя — запускает</option>
+      <option value="1" data-i18n-en="right — selects">правая — выделяет</option>
     </select>
   </label>
-  <label class="stat" style="font-size:12px;color:#8a8a8a">масштаб
+  <label class="stat" style="font-size:12px;color:#8a8a8a"><span data-i18n-en="language">язык</span>
+    <select id="lang" style="font:inherit;background:#222;color:#ddd;border:1px solid #333;border-radius:5px;padding:3px 6px"></select>
+  </label>
+  <label class="stat" style="font-size:12px;color:#8a8a8a"><span data-i18n-en="zoom">масштаб</span>
     <select id="zoom" style="font:inherit;background:#222;color:#ddd;border:1px solid #333;border-radius:5px;padding:3px 6px">
-      <option value="1">1:1 — резко</option>
+      <option value="1" data-i18n-en="1:1 — sharp">1:1 — резко</option>
       <option value="1.25">1,25×</option>
       <option value="1.5">1,5×</option>
-      <option value="2">2× — крупно</option>
+      <option value="2" data-i18n-en="2× — large">2× — крупно</option>
     </select>
   </label>
 </header>
 <div id="wrap"><canvas id="scr" width="1024" height="768"></canvas></div>
-<div class="hint">
+<div class="hint" data-i18n-en='Mouse: <span class="btn" id="b0"></span>left <span class="btn" id="b1"></span>middle (<kbd class="k-alt">Alt</kbd>+left) <span class="btn" id="b2"></span>right. The Oberon shell is built on interclicks — the middle button executes text. <b><kbd class="k-alt">Alt</kbd>+left gives the middle button instead of the left one, not together with it</b>, so a real interclick is <kbd>Shift</kbd>+left: it presses left and right at once, which is what, for example, the second mark in the drawing program needs. Writes to the disk stay in the memory of this tab and are lost when the page reloads. <kbd>Ctrl</kbd> is no good as a modifier: macOS turns it into the right button before the page sees it.'>
   Мышь: <span class="btn" id="b0"></span>левая
   <span class="btn" id="b1"></span>средняя (<kbd class="k-alt">Alt</kbd>+левая)
   <span class="btn" id="b2"></span>правая.
@@ -59,6 +62,22 @@
 
 <script type="module">
 import OberonRISC5 from './risc5.js';
+import { LANG, LANGS, t, applyMarkup, setLang } from './i18n.js';
+import { labelAltKeys } from './machine.js';
+
+// Язык проставляется ДО поиска узлов: подсказка про кнопки заменяется целиком,
+// вместе со span'ами b0..b2, и ссылки на прежние узлы стали бы висячими.
+applyMarkup(document);
+labelAltKeys(document);
+{
+  const sel = document.getElementById('lang');
+  for (const [code, name] of Object.entries(LANGS)) {
+    const o = document.createElement('option');
+    o.value = code; o.textContent = name; o.selected = (code === LANG);
+    sel.append(o);
+  }
+  sel.onchange = e => setLang(e.target.value);
+}
 
 const cv = document.getElementById('scr');
 const ctx = cv.getContext('2d', { alpha:false });
@@ -105,12 +124,12 @@ const PS2 = {
   ShiftLeft:0x12,ShiftRight:0x59,ControlLeft:0x14,AltLeft:0x11,
 };
 
-window.addEventListener('error', e => stat.textContent = 'ОШИБКА: ' + e.message);
-window.addEventListener('unhandledrejection', e => stat.textContent = 'ОТКАЗ: ' + (e.reason?.message || e.reason));
+window.addEventListener('error', e => stat.textContent = t({ en: 'ERROR: ', ru: 'ОШИБКА: ' }) + e.message);
+window.addEventListener('unhandledrejection', e => stat.textContent = t({ en: 'REJECTED: ', ru: 'ОТКАЗ: ' }) + (e.reason?.message || e.reason));
 
-stat.textContent = 'инициализация WASM…';
+stat.textContent = t({ en: 'starting WASM…', ru: 'инициализация WASM…' });
 const M = await OberonRISC5();
-stat.textContent = 'WASM загружен, тяну образ…';
+stat.textContent = t({ en: 'WASM loaded, fetching the image…', ru: 'WASM загружен, тяну образ…' });
 const promText = await (await fetch('prom_sd.mem')).text();
 const promArr = new Uint32Array(promText.trim().split('\n').map(l => parseInt(l,16)));
 const imgBuf  = new Uint8Array(await (await fetch('oberon.dsk')).arrayBuffer());
@@ -121,10 +140,10 @@ M._soc_init(pProm, promArr.length, pImg, imgBuf.length);
 // soc_init копирует оба буфера к себе — держать их дальше незачем (найдено аудитом).
 M._free(pProm); M._free(pImg);
 
-stat.textContent = 'система инициализирована';
+stat.textContent = t({ en: 'system initialised', ru: 'система инициализирована' });
 const heap32 = M.HEAPU32 || new Uint32Array(M.wasmMemory.buffer);
 const fbPtr = M._soc_framebuffer(), fbN = M._soc_fb_words();
-if (!heap32) throw new Error('нет доступа к куче WASM');
+if (!heap32) throw new Error(t({ en: 'no access to the WASM heap', ru: 'нет доступа к куче WASM' }));
 // ВАЖНО: при ALLOW_MEMORY_GROWTH буфер может быть заменён, поэтому вид
 // на кадровый буфер строим заново на каждом кадре, а не один раз.
 const fbView = () => new Uint32Array((M.HEAPU32 || heap32).buffer, fbPtr, fbN);
@@ -218,11 +237,13 @@ function frame() {
     if (now - t0 > 500) {
       const mhz = (cyc - c0) / (now - t0) / 1000;
       stat.textContent =
-        `${(M._soc_insns()/1e6).toFixed(1)} млн инструкций · ${mhz.toFixed(2)} МГц-экв · PC=${M._soc_pc().toString(16).toUpperCase()}`;
+        `${(M._soc_insns()/1e6).toFixed(1)} ${t({ en: 'M instructions', ru: 'млн инструкций' })}`
+        + ` · ${mhz.toFixed(2)} ${t({ en: 'MHz-equiv', ru: 'МГц-экв' })}`
+        + ` · PC=${M._soc_pc().toString(16).toUpperCase()}`;
       t0 = now; c0 = cyc;
     }
   }
-  } catch (e) { window.__err = String(e && e.stack || e); stat.textContent = 'СБОЙ В ЦИКЛЕ: ' + e; return; }
+  } catch (e) { window.__err = String(e && e.stack || e); stat.textContent = t({ en: 'LOOP FAILED: ', ru: 'СБОЙ В ЦИКЛЕ: ' }) + e; return; }
   raf = requestAnimationFrame(frame);
 }
 
@@ -241,7 +262,9 @@ document.addEventListener('visibilitychange', kick);
 // Нужен, чтобы проверять страницу в автоматизации, где вкладка скрыта.
 window.__step = (n) => { M._soc_run(n | 0); draw(fbView()); return M._soc_insns(); };
 
-stat.textContent = document.hidden ? 'вкладка скрыта — ждём' : 'цикл запускается…';
+stat.textContent = document.hidden
+  ? t({ en: 'tab hidden — waiting', ru: 'вкладка скрыта — ждём' })
+  : t({ en: 'starting the loop…', ru: 'цикл запускается…' });
 pushMouse();
 kick();
 
