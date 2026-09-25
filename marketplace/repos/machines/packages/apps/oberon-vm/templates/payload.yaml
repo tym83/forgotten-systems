@@ -11,6 +11,12 @@ kind: PersistentVolumeClaim
 metadata:
   name: {{ include "oberon-vm.fullname" . }}-payload
   labels: {{- include "oberon-vm.labels" . | nindent 4 }}
+  annotations:
+    # Том создаётся ПЕРЕД машиной: ей неоткуда взять ни ПЗУ, ни систему, и
+    # без них она просто не заведётся. Удалять его между обновлениями нельзя,
+    # поэтому политики удаления здесь нет.
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
 spec:
   accessModes: [ReadWriteOnce]
   storageClassName: {{ .Values.storageClass }}
@@ -24,8 +30,14 @@ metadata:
   name: {{ include "oberon-vm.fullname" . }}-fill
   labels: {{- include "oberon-vm.labels" . | nindent 4 }}
   annotations:
-    # Задача разовая: наполнила том — и больше не нужна. Но удалять её сразу
-    # нельзя, иначе не посмотреть, почему не получилось.
+    # ⚠ Задача должна отработать ДО запуска машины и пересоздаваться при каждом
+    # обновлении. Обычным ресурсом это не выходит: Helm не трогает уже
+    # существующую задачу, и однажды упавшая остаётся упавшей навсегда.
+    #
+    # Предварительный этап решает оба: он идёт раньше машины, а прежняя задача
+    # удаляется перед созданием новой.
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
     "helm.sh/hook-delete-policy": before-hook-creation
 spec:
   backoffLimit: 3
