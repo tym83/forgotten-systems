@@ -1,0 +1,27 @@
+<domain type="kvm" xmlns:qemu="http://libvirt.org/schemas/domain/qemu/1.0">
+  <name>default_testvm</name>
+  <memory unit="MiB">128</memory>
+  <os>
+    <type arch="x86_64" machine="q35">hvm</type>
+  </os>
+  <devices>
+    <emulator>/usr/libexec/qemu-kvm</emulator>
+    <controller type="usb" index="0" model="piix3-uhci"/>
+    <controller type="pci" index="0" model="pcie-root"/>
+    <video><model type="vga" heads="1"/></video>
+    <memballoon model="virtio"/>
+    <disk device="disk" type="file">
+      <source file="/var/run/kubevirt/disk.img"/>
+      <target bus="virtio" dev="vda"/>
+    </disk>
+    <interface type="ethernet">
+      <model type="virtio"/>
+    </interface>
+    <serial type="unix"><target port="0"/></serial>
+    <console type="unix"><target type="serial" port="0"/></console>
+    <channel type="unix">
+      <target name="org.qemu.guest_agent.0" type="virtio"/>
+    </channel>
+    <rng model="virtio"><backend model="random">/dev/urandom</backend></rng>
+  </devices>
+</domain>
