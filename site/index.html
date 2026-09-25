@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Палеокомпьютинг</title>
-<meta name="description" content="Компьютеры, языки и операционные системы, которые работали — и которых больше нет. Запускаем их по-настоящему и смотрим, что они умели.">
+<title>Paleocomputing</title>
+<meta name="description" content="Computers, languages and operating systems that worked — and are gone. We run them for real and look at what they could do.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
@@ -14,102 +14,104 @@
 <div class="sheet">
 
   <header class="masthead">
-    <p class="eyebrow">Палеокомпьютинг</p>
-    <h1>Компьютеры, которых больше нет</h1>
+    <p class="eyebrow">Paleocomputing · <a href="ru/">Русский</a></p>
+    <h1>Computers that are gone</h1>
     <p class="standfirst">
-      Машины, языки и операционные системы, которые работали, а потом исчезли —
-      иногда вместе с идеями, которые до сих пор никто не повторил. Мы запускаем
-      их по-настоящему и смотрим, что они умели.
+      Machines, languages and operating systems that worked and then vanished —
+      sometimes along with ideas nobody has repeated since. We run them for
+      real and look at what they could do.
     </p>
   </header>
 
   <section>
-    <h2>Что значит «по-настоящему»</h2>
+    <h2>What "for real" means</h2>
     <p>
-      Обычно такие системы показывают через эмулятор — программу, которая
-      изображает старое железо. Она говорит, что получится, но не говорит,
-      сколько это стоило: время в ней выдумано.
+      Systems like these are usually shown through an emulator: a program that
+      imitates old hardware. It tells you what would come out, but not what it
+      cost — time inside it is invented.
     </p>
     <p>
-      Мы берём описание самой схемы, если оно сохранилось, и считаем состояние
-      каждого проводника на каждом такте. Тогда числа, которые получаются, —
-      это то, что делал настоящий чип, а не наше предположение о нём. И тогда
-      систему можно не только показать, но и <strong>спросить</strong>.
+      We take the description of the circuit itself, where one survives, and
+      compute the state of every wire on every clock. Then the numbers that come
+      out are what a real chip did, not our guess about it. And then the system
+      can be not only shown but <strong>asked</strong>.
     </p>
   </section>
 
   <section>
-    <h2>Проекты</h2>
+    <h2>Projects</h2>
     <ul class="projects">
 
       <li class="project">
-        <h3><a href="oberon/">Оберон и машина RISC5</a></h3>
-        <span class="status live">работает</span>
+        <h3><a href="oberon/">Oberon and the RISC5 machine</a></h3>
+        <span class="status live">working</span>
         <p>
-          Целый компьютер — процессор, компилятор, операционная система, окна —
-          который помещается в шесть тысяч строк и в одну голову. Загружается
-          прямо в браузере, на настоящем описании схемы. Девять лабораторных и
-          методичка.
+          A whole computer — processor, compiler, operating system, windows —
+          that fits in six thousand lines and in one head. It boots in a
+          browser, on the real description of the circuit. Nine labs and a
+          handbook.
         </p>
       </li>
 
       <li class="project">
         <h3>Burroughs B5500</h3>
-        <span class="status">в работе</span>
+        <span class="status">in progress</span>
         <p>
-          Машина 1961 года, в которой переполнения буфера не существует как
-          класса: границы массива проверяет само железо. Эмулятор и компилятор
-          Алгола готовы, выпуск пишется.
+          A machine from 1961 in which buffer overflow does not exist as a
+          class: the hardware checks array bounds itself. The emulator and an
+          Algol compiler are ready; the write-up is being written.
         </p>
       </li>
 
       <li class="project">
         <h3>Lilith</h3>
-        <span class="status">следующая</span>
+        <span class="status">next</span>
         <p>
-          Машина Вирта под Модулу-2, прямой предок Оберона. Своя система команд,
-          своя графика. Станет второй машиной на той же оснастке — и проверкой,
-          что оснастка вообще переносима.
+          Wirth's machine for Modula-2, direct ancestor of Oberon. Its own
+          instruction set, its own graphics. It will be the second machine on
+          the same instrumentation — and a test of whether that instrumentation
+          travels at all.
         </p>
       </li>
 
       <li class="project">
         <h3>Ada RED</h3>
-        <span class="status">изучаем</span>
+        <span class="status">reading</span>
         <p>
-          Язык, проигравший конкурс министерства обороны США в 1979 году с
-          перевесом в один голос. Спецификация, обоснование и примеры сохранились
-          полностью — а реализации не было никогда, ни одной.
+          The language that lost the US Department of Defense competition in
+          1979 by a single vote. The specification, the rationale and the
+          examples survive in full — and there was never an implementation, not
+          one.
         </p>
       </li>
 
       <li class="project">
-        <h3>Транспьютер</h3>
-        <span class="status">задумано</span>
+        <h3>The transputer</h3>
+        <span class="status">planned</span>
         <p>
-          Процессор, у которого планировщик задач и каналы связи между
-          вычислителями сделаны в железе. Сетка из таких чипов собиралась как
-          конструктор. Система команд опубликована.
+          A processor whose task scheduler and inter-processor channels are in
+          hardware. A mesh of such chips assembled like a construction set. The
+          instruction set is published.
         </p>
       </li>
 
       <li class="project">
         <h3>iAPX 432</h3>
-        <span class="status">задумано</span>
+        <span class="status">planned</span>
         <p>
-          Попытка Intel сделать процессор, который понимает объекты и права
-          доступа на уровне схемы. Провалилась по скорости, но документация
-          сохранилась целиком и самодостаточна.
+          Intel's attempt at a processor that understands objects and access
+          rights at the level of the circuit. It failed on speed, but the
+          documentation survives entire and is self-contained.
         </p>
       </li>
 
       <li class="project">
-        <h3>Кронос</h3>
-        <span class="status">изучаем</span>
+        <h3>Kronos</h3>
+        <span class="status">reading</span>
         <p>
-          Новосибирский ответ Lilith: процессор под Модулу, сделанный в
-          Академгородке. Материал почти не оцифрован — здесь сначала архивная
-          работа, потом всё остальное.
+          Novosibirsk's answer to Lilith: a processor for Modula, built in
+          Akademgorodok. The material is barely digitised — here the archive
+          work comes first and everything else after.
         </p>
       </li>
 
@@ -117,9 +119,9 @@
   </section>
 
   <footer>
-    Исходники, измерения и находки —
+    Sources, measurements and findings —
     <a href="https://github.com/tym83/paleocomputing">github.com/tym83/paleocomputing</a><br>
-    Взятое готовым остаётся под лицензиями своих авторов; наше — под Apache-2.0.
+    What was taken ready stays under its authors' licences; ours is Apache-2.0.
   </footer>
 
 </div>
