@@ -40,6 +40,13 @@ ext/refemu/reftrace: ext/refemu/trace.c ext/refemu/risc.c ext/refemu/risc-fp.c e
 
 # Браузерная сборка. Команды emcc не было нигде — аудитор восстанавливал её
 # по косвенным признакам.
+# ⚠ Пути к исходникам стенда — АБСОЛЮТНЫЕ. Verilator кладёт их в порождённый
+# makefile как есть, а собирает из своего каталога: относительный путь там
+# разрешается по-разному в разных версиях, и на apt'шном verilator сборка
+# падает с «No rule to make target 'tb/run_tests.cpp'». Локально не видно:
+# в свежих версиях путь разрешается правильно.
+TB := $(abspath tb)
+
 VINC := $(shell verilator --getenv VERILATOR_ROOT)/include
 WASM_SRC := $$(ls build/obj_wasm/*.cpp | grep -v "__Dpi\.cpp$$")
 
@@ -129,12 +136,12 @@ tests/%.bin tests/%.chk: tests/%.s tools/asm.py
 # «ВСЁ ЗЕЛЁНОЕ» при нуле выполненных тестов. Теперь сборка обязана пройти.
 build/obj_tests/run_tests: $(RTL) tb/run_tests.cpp tb/soc_mem.h
 	@mkdir -p build
-	@verilator $(VFLAGS) -o run_tests --top-module RISC5 --Mdir build/obj_tests $(RTL) tb/run_tests.cpp
+	@verilator $(VFLAGS) -o run_tests --top-module RISC5 --Mdir build/obj_tests $(RTL) $(TB)/run_tests.cpp
 	@test -x $@ || { echo "СБОРКА НЕ ДАЛА БИНАРНИКА: $@"; exit 1; }
 
 build/obj_chk/run_tests_chk: $(RTL) tb/run_tests.cpp tb/soc_mem.h
 	@mkdir -p build
-	@verilator $(VFLAGS) -DWITH_CHK -DCHK_SPLIT -o run_tests_chk --top-module RISC5 --Mdir build/obj_chk $(RTL) tb/run_tests.cpp
+	@verilator $(VFLAGS) -DWITH_CHK -DCHK_SPLIT -o run_tests_chk --top-module RISC5 --Mdir build/obj_chk $(RTL) $(TB)/run_tests.cpp
 	@test -x $@ || { echo "СБОРКА НЕ ДАЛА БИНАРНИКА: $@"; exit 1; }
 
 # Полная регрессия. Базовые тесты обязаны давать ИДЕНТИЧНЫЕ такты на обоих ядрах —
@@ -170,8 +177,8 @@ test: all
 # В RISC5 нет ловушки на неизвестную инструкцию, поэтому занятие чужой
 # кодировки проявилось бы молчаливым изменением поведения старого кода.
 equiv:
-	@verilator $(VFLAGS) -o deq_base --top-module RISC5 --Mdir build/obj_deqb $(RTL) tb/decoder_equiv.cpp 2>&1 | grep -E "error:" || true
-	@verilator $(VFLAGS) -DWITH_CHK -DCHK_SPLIT -o deq_chk --top-module RISC5 --Mdir build/obj_deqc $(RTL) tb/decoder_equiv.cpp 2>&1 | grep -E "error:" || true
+	@verilator $(VFLAGS) -o deq_base --top-module RISC5 --Mdir build/obj_deqb $(RTL) $(TB)/decoder_equiv.cpp 2>&1 | grep -E "error:" || true
+	@verilator $(VFLAGS) -DWITH_CHK -DCHK_SPLIT -o deq_chk --top-module RISC5 --Mdir build/obj_deqc $(RTL) $(TB)/decoder_equiv.cpp 2>&1 | grep -E "error:" || true
 	@./build/obj_deqb/deq_base > build/deq_base.txt
 	@./build/obj_deqc/deq_chk  > build/deq_chk.txt
 	@python3 tools/cmp_decoder.py build/deq_base.txt build/deq_chk.txt
@@ -186,7 +193,7 @@ lockstep: $(REFOBJ)
 	@cp -f ext/disk/Oberon-2016-08-02.dsk build/disk_rtl.dsk
 	@cp -f ext/disk/Oberon-2016-08-02.dsk build/disk_ref.dsk
 	@verilator $(VFLAGS) -CFLAGS "-I../../ext/refemu" -o lockstep --top-module RISC5 \
-	  --Mdir build/obj_ls $(RTL) tb/lockstep.cpp \
+	  --Mdir build/obj_ls $(RTL) $(TB)/lockstep.cpp \
 	  ../../build/refobj/risc.o ../../build/refobj/risc-fp.o ../../build/refobj/disk.o \
 	  2>&1 | grep -E "error:" || true
 	@./build/obj_ls/lockstep --max=15000000
@@ -199,7 +206,7 @@ BOOT_CRC := B5DFC933
 
 boot:
 	@mkdir -p build
-	@verilator $(VFLAGS) -o soc_tb --top-module RISC5 --Mdir build/obj_soc $(RTL) tb/soc_tb.cpp tb/disk/disk.c
+	@verilator $(VFLAGS) -o soc_tb --top-module RISC5 --Mdir build/obj_soc $(RTL) $(TB)/soc_tb.cpp $(TB)/disk/disk.c
 	@./build/obj_soc/soc_tb --prom=rtl/prom_sd.mem --max=12000000 --expect-crc=$(BOOT_CRC)
 
 # Те же системные прогоны на ядре С расширением ISA. Найдено аудитом: все системные
@@ -208,14 +215,14 @@ lockstep-chk: $(REFOBJ)
 	@cp -f ext/disk/Oberon-2016-08-02.dsk build/disk_rtl.dsk
 	@cp -f ext/disk/Oberon-2016-08-02.dsk build/disk_ref.dsk
 	@verilator $(VFLAGS) -DWITH_CHK -DCHK_SPLIT -CFLAGS "-I../../ext/refemu" -o lockstep_chk \
-	  --top-module RISC5 --Mdir build/obj_ls_chk $(RTL) tb/lockstep.cpp \
+	  --top-module RISC5 --Mdir build/obj_ls_chk $(RTL) $(TB)/lockstep.cpp \
 	  ../../build/refobj/risc.o ../../build/refobj/risc-fp.o ../../build/refobj/disk.o \
 	  2>&1 | grep -E "error:" || true
 	@./build/obj_ls_chk/lockstep_chk --max=15000000
 
 boot-chk:
 	@mkdir -p build
-	@verilator $(VFLAGS) -DWITH_CHK -DCHK_SPLIT -o soc_tb_chk --top-module RISC5 --Mdir build/obj_soc_chk $(RTL) tb/soc_tb.cpp tb/disk/disk.c
+	@verilator $(VFLAGS) -DWITH_CHK -DCHK_SPLIT -o soc_tb_chk --top-module RISC5 --Mdir build/obj_soc_chk $(RTL) $(TB)/soc_tb.cpp $(TB)/disk/disk.c
 	@./build/obj_soc_chk/soc_tb_chk --prom=rtl/prom_sd.mem --max=12000000 --expect-crc=$(BOOT_CRC)
 
 # ───────────────────────────────────────────────────────────────────────────
@@ -230,7 +237,7 @@ check: pristine test boot boot-chk lockstep selfhost roundtrip bootstrap rebuild
 # эмуляторе, и порождает побайтово тот же код.
 build/obj_nb/norebo_tb: $(RTL) tb/norebo_tb.cpp tb/norebo_bridge.cpp
 	@mkdir -p build
-	@verilator $(VFLAGS) -o norebo_tb --top-module RISC5 --Mdir build/obj_nb $(RTL) tb/norebo_tb.cpp tb/norebo_bridge.cpp
+	@verilator $(VFLAGS) -o norebo_tb --top-module RISC5 --Mdir build/obj_nb $(RTL) $(TB)/norebo_tb.cpp $(TB)/norebo_bridge.cpp
 	@test -x $@ || { echo "СБОРКА НЕ ДАЛА БИНАРНИКА: $@"; exit 1; }
 
 selfhost: build/obj_nb/norebo_tb $(NOREBO)
@@ -320,7 +327,7 @@ scripts/rebuild3.txt: scripts/rebuild3.src
 
 rebuild: scripts/rebuild1.txt scripts/rebuild2.txt scripts/rebuild3.txt
 	@mkdir -p build
-	@verilator $(VFLAGS) -o soc_tb --top-module RISC5 --Mdir build/obj_soc $(RTL) tb/soc_tb.cpp tb/disk/disk.c
+	@verilator $(VFLAGS) -o soc_tb --top-module RISC5 --Mdir build/obj_soc $(RTL) $(TB)/soc_tb.cpp $(TB)/disk/disk.c
 	@cp -f ext/disk/Oberon-2016-08-02.dsk build/rebuild.dsk
 	@echo "  пересборка системы внутри системы: 3 сессии, ~8 минут"
 	@./build/obj_soc/soc_tb --prom=rtl/prom_sd.mem --max=430000000 \
@@ -351,7 +358,7 @@ scripts/gen2_sep.txt: scripts/gen2_sep.src tools/mkscript.py tools/keymap.py
 
 bootstrap: scripts/gen2_sep.txt
 	@mkdir -p build
-	@verilator $(VFLAGS) -o soc_tb --top-module RISC5 --Mdir build/obj_soc $(RTL) tb/soc_tb.cpp tb/disk/disk.c
+	@verilator $(VFLAGS) -o soc_tb --top-module RISC5 --Mdir build/obj_soc $(RTL) $(TB)/soc_tb.cpp $(TB)/disk/disk.c
 	@echo "  самораскрутка внутри системы: 715 млн инструкций, ~4 минуты"
 	@./build/obj_soc/soc_tb --prom=rtl/prom_sd.mem --max=715000000 \
 	  --script=scripts/gen2_sep.txt | grep -E "инструкций|расхождений"
