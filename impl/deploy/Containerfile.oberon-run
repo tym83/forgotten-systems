@@ -16,7 +16,11 @@ RUN cc -O2 -o /norebo norebo/Runtime/norebo.c norebo/Runtime/risc-cpu.c
 # ждёт байты. Переводим при сборке, чтобы не держать в репозитории две копии.
 FROM docker.io/library/python:3.12-slim AS payload
 WORKDIR /p
-COPY web/prom_sd.mem web/oberon.dsk ./
+# ⚠ Берём ИСТОЧНИКИ, а не web/: там лежат продукты сборки, и в .gitignore.
+# Локально они есть, в сборке — нет, и COPY молча копирует пустоту. Ровно на
+# этом образ раздачи однажды вышел без машины.
+COPY rtl/prom_sd.mem ./
+COPY ext/disk/Oberon-2016-08-02.dsk ./oberon.dsk
 RUN python3 -c "import struct; \
   ws=[int(x,16) for x in open('prom_sd.mem').read().split()]; \
   open('prom.bin','wb').write(b''.join(struct.pack('<I',w) for w in ws))"

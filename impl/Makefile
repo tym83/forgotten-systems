@@ -41,15 +41,23 @@ ext/refemu/reftrace: ext/refemu/trace.c ext/refemu/risc.c ext/refemu/risc-fp.c e
 # Браузерная сборка. Команды emcc не было нигде — аудитор восстанавливал её
 # по косвенным признакам.
 VINC := $(shell verilator --getenv VERILATOR_ROOT)/include
-WASM_SRC := $(filter-out %__Dpi.cpp,$(wildcard build/obj_wasm/*.cpp))
+WASM_SRC := $$(ls build/obj_wasm/*.cpp | grep -v "__Dpi\.cpp$$")
 
 web: web/risc5.js web/prom_sd.mem web/oberon.dsk
 
 build/obj_wasm/VRISC5.cpp: $(RTL)
 	@verilator -Wno-fatal --cc --public-flat-rw --Mdir build/obj_wasm --top-module RISC5 $(RTL)
 
+# ⚠ Список порождённых файлов берётся ОБОЛОЧКОЙ, а не $(wildcard).
+#
+# GNU make кэширует содержимое каталога на весь прогон: build/obj_wasm он
+# читает раньше, чем verilator туда пишет, и список остаётся пустым. Тогда
+# VRISC5.cpp в сборку не попадает, и связывание падает на eval_step.
+#
+# Локально это не видно: файлы лежат с прошлого раза, и кэш их застаёт. Видно
+# только на чистой сборке — то есть там, где собирают все остальные.
 web/risc5.js: build/obj_wasm/VRISC5.cpp tb/wasm_main.cpp tb/wasm_stubs.cpp tb/memdisk.h
-	@em++ -O3 -I build/obj_wasm -I $(VINC) -I $(VINC)/vltstd -I tb 	  -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -DVM_TRACE_SAIF=0 	  $(filter-out %__Dpi.cpp,$(wildcard build/obj_wasm/*.cpp)) 	  $(VINC)/verilated.cpp $(VINC)/verilated_threads.cpp tb/wasm_main.cpp tb/wasm_stubs.cpp 	  -s EXPORTED_FUNCTIONS='["_soc_init","_soc_run","_soc_framebuffer","_soc_fb_words","_soc_cycles","_soc_insns","_soc_pc","_soc_key","_soc_mouse","_soc_reg","_soc_flags","_soc_h","_soc_ram","_soc_fb_crc","_soc_disk_word","_soc_disk_size","_soc_poke","_malloc","_free"]' 	  -s EXPORTED_RUNTIME_METHODS='["HEAPU8","HEAPU32"]' 	  -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s EXPORT_ES6=1 -s EXPORT_NAME=OberonRISC5 	  -s ENVIRONMENT=web,node -s FILESYSTEM=0 -o $@
+	@em++ -O3 -I build/obj_wasm -I $(VINC) -I $(VINC)/vltstd -I tb 	  -DVM_COVERAGE=0 -DVM_SC=0 -DVM_TRACE=0 -DVM_TRACE_FST=0 -DVM_TRACE_VCD=0 -DVM_TRACE_SAIF=0 	  $$(ls build/obj_wasm/*.cpp | grep -v "__Dpi\.cpp$$") 	  $(VINC)/verilated.cpp $(VINC)/verilated_threads.cpp tb/wasm_main.cpp tb/wasm_stubs.cpp 	  -s EXPORTED_FUNCTIONS='["_soc_init","_soc_run","_soc_framebuffer","_soc_fb_words","_soc_cycles","_soc_insns","_soc_pc","_soc_key","_soc_mouse","_soc_reg","_soc_flags","_soc_h","_soc_ram","_soc_fb_crc","_soc_disk_word","_soc_disk_size","_soc_poke","_malloc","_free"]' 	  -s EXPORTED_RUNTIME_METHODS='["HEAPU8","HEAPU32"]' 	  -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s EXPORT_ES6=1 -s EXPORT_NAME=OberonRISC5 	  -s ENVIRONMENT=web,node -s FILESYSTEM=0 -o $@
 
 web/prom_sd.mem: rtl/prom_sd.mem
 	@cp $< $@
