@@ -14,6 +14,12 @@ KubeVirt позволяет стороннему контейнеру переп
   * путь к эмулятору — на наш, лежащий на общем томе;
   * убирается всё, что требует шины PCI: у машины Вирта нет ни PCI, ни USB,
     ни звука, и libvirt на них отвечает «No PCI buses available»;
+  * убираются свойства уровня платформы — ACPI, APIC и прочее: их у машины
+    тоже нет, и libvirt отвергает описание целиком
+    («machine type 'oberon' does not support ACPI»);
+  * число процессоров приводится к одному: у машины Вирта он один, и libvirt
+    отвергает описание, где запрошено больше
+    («Maximum CPUs greater than specified machine type limit 1»);
   * добавляются ПЗУ и образ диска — привычной микропрограммы у машины нет.
 
 Запускается обёрткой sidecar-shim: она ищет исполняемый файл с именем
@@ -60,6 +66,45 @@ def convert(domain_xml):
     type_el = os_el.find('type')
     type_el.set('arch', 'risc5')
     type_el.set('machine', 'oberon')
+
+    # ⚠ Режим smbios убираем, а раздел sysinfo ОСТАВЛЯЕМ. Тонкость: из режима
+    # libvirt выводит аргумент -smbios, которого наша цель не понимает
+    # («Option not supported for this target»), а сам раздел sysinfo читает
+    # virt-launcher уже после запуска и без него падает. Два требования тянут
+    # в разные стороны, и развести их можно только так.
+    for sm in os_el.findall('smbios'):
+        os_el.remove(sm)
+
+    # ── Свойства платформы ────────────────────────────────────────────────
+    #
+    # KubeVirt объявляет ACPI и APIC, рассчитывая на обычную машину. У Вирта
+    # нет ни того, ни другого, и libvirt отвергает описание целиком:
+    # «machine type 'oberon' does not support ACPI». Нашлось только на живом
+    # кластере — в рукописном описании этих свойств просто не было.
+    for f in root.findall('features'):
+        root.remove(f)
+
+    # Топология процессора и управление питанием — оттуда же.
+    #
+    # ⚠ sysinfo НЕ трогаем: его читает сам virt-launcher уже после запуска, и
+    # без него он падает с «Domain sysinfo are not available». Убирать надо
+    # ровно то, что отвергает libvirt, и ни строкой больше.
+    for tag in ('cpu', 'clock', 'pm', 'cputune', 'numatune',
+                'launchSecurity', 'iothreads'):
+        for el in root.findall(tag):
+            root.remove(el)
+
+    # ── Число процессоров ─────────────────────────────────────────────────
+    #
+    # У машины Вирта процессор один, и больше быть не может. KubeVirt же
+    # проставляет и текущее число, и предел для горячего добавления, а libvirt
+    # сверяет их с возможностями машины и отвергает описание.
+    for vcpu in root.findall('vcpu'):
+        vcpu.text = '1'
+        for a in ('current', 'placement'):
+            vcpu.attrib.pop(a, None)
+    for vcpus in root.findall('vcpus'):
+        root.remove(vcpus)
 
     devices = root.find('devices')
 
