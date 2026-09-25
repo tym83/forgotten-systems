@@ -17,8 +17,8 @@
   /* Экран стоит на месте, мотается только пояснение под ним. */
   #wrap { display:flex; justify-content:center; padding:0 10px 14px;
           flex:none; overflow:auto }
-  canvas { background:#fff; image-rendering:pixelated; width:calc(1024px * var(--k, 1)); max-width:100%; height:auto; aspect-ratio:1024/768;
-           box-shadow:0 0 0 1px #333; cursor:crosshair; }
+  oberon-machine { display:block; width:calc(1024px * var(--k, 1)); max-width:100%;
+                   box-shadow:0 0 0 1px #333; }
   .hint { font-size:12px; color:#8a8a8a; padding:0 14px 12px; }
   kbd { background:#333; border-radius:3px; padding:1px 5px; font:11px ui-monospace,monospace; }
   .btn { display:inline-block; width:14px; height:14px; border:1px solid #555; border-radius:2px;
@@ -48,7 +48,7 @@
     </select>
   </label>
 </header>
-<div id="wrap"><canvas id="scr" width="1024" height="768"></canvas></div>
+<div id="wrap"></div>
 <div class="hint" data-i18n-en='Mouse: <span class="btn" id="b0"></span>left <span class="btn" id="b1"></span>middle (<kbd class="k-alt">Alt</kbd>+left) <span class="btn" id="b2"></span>right. The Oberon shell is built on interclicks — the middle button executes text. <b><kbd class="k-alt">Alt</kbd>+left gives the middle button instead of the left one, not together with it</b>, so a real interclick is <kbd>Shift</kbd>+left: it presses left and right at once, which is what, for example, the second mark in the drawing program needs. Writes to the disk stay in the memory of this tab and are lost when the page reloads. <kbd>Ctrl</kbd> is no good as a modifier: macOS turns it into the right button before the page sees it.'>
   Мышь: <span class="btn" id="b0"></span>левая
   <span class="btn" id="b1"></span>средняя (<kbd class="k-alt">Alt</kbd>+левая)
@@ -61,9 +61,18 @@
 </div>
 
 <script type="module">
-import OberonRISC5 from './risc5.js';
+/*
+ * Страница запуска: вся машина — во встраиваемом компоненте, здесь только
+ * язык, масштаб и выбор кнопки мыши.
+ *
+ * ⚠ Раньше здесь лежала СВОЯ копия отрисовки, таблицы скан-кодов и цикла
+ * кадров — вторая после machine.js. Ровно тот случай, из-за которого в этом
+ * репозитории уже дважды расходились два места: правился один, а работал
+ * другой. Теперь их снова одно.
+ */
 import { LANG, LANGS, t, applyMarkup, setLang } from './i18n.js';
 import { labelAltKeys } from './machine.js';
+import './embed.js';
 
 // Язык проставляется ДО поиска узлов: подсказка про кнопки заменяется целиком,
 // вместе со span'ами b0..b2, и ссылки на прежние узлы стали бы висячими.
@@ -79,203 +88,43 @@ labelAltKeys(document);
   sel.onchange = e => setLang(e.target.value);
 }
 
-const cv = document.getElementById('scr');
-const ctx = cv.getContext('2d', { alpha:false });
-const img = ctx.createImageData(1024, 768);
 const stat = document.getElementById('stat');
-const bi = [0,1,2].map(i => document.getElementById('b'+i));
+const wrap = document.getElementById('wrap');
+const bi = [0, 1, 2].map(i => document.getElementById('b' + i));
 
-// Развёртка 1 бит -> RGBA через таблицу на 256 записей по 8 пикселей.
-// Измерено: обычный JS даёт ~0.33 мс на кадр, то есть оптимизировать нечего.
-const LUT = new Uint32Array(256 * 8);
-for (let b = 0; b < 256; b++)
-  for (let k = 0; k < 8; k++)
-    LUT[b*8+k] = (b >> k) & 1 ? 0xFF000000 : 0xFFFFFFFF;   // 1 = чёрный
+const m = document.createElement('oberon-machine');
+m.setAttribute('autostart', '');
+wrap.append(m);
 
-const px = new Uint32Array(img.data.buffer);
-
-function draw(fb) {
-  // Кадровый буфер хранится СНИЗУ ВВЕРХ (VID.v: vidadr = Org + {3'b0, ~vcnt, hword}).
-  for (let y = 0; y < 768; y++) {
-    const src = (767 - y) * 32, dst = y * 1024;
-    for (let w = 0; w < 32; w++) {
-      const v = fb[src + w], o = dst + w * 32;
-      for (let byte = 0; byte < 4; byte++) {
-        const t = ((v >>> (byte*8)) & 0xFF) * 8, q = o + byte*8;
-        px[q  ]=LUT[t  ]; px[q+1]=LUT[t+1]; px[q+2]=LUT[t+2]; px[q+3]=LUT[t+3];
-        px[q+4]=LUT[t+4]; px[q+5]=LUT[t+5]; px[q+6]=LUT[t+6]; px[q+7]=LUT[t+7];
-      }
-    }
-  }
-  ctx.putImageData(img, 0, 0);
-}
-
-// ── скан-коды PS/2, набор 2 ──────────────────────────────────────────────────
-const PS2 = {
-  KeyA:0x1C,KeyB:0x32,KeyC:0x21,KeyD:0x23,KeyE:0x24,KeyF:0x2B,KeyG:0x34,KeyH:0x33,
-  KeyI:0x43,KeyJ:0x3B,KeyK:0x42,KeyL:0x4B,KeyM:0x3A,KeyN:0x31,KeyO:0x44,KeyP:0x4D,
-  KeyQ:0x15,KeyR:0x2D,KeyS:0x1B,KeyT:0x2C,KeyU:0x3C,KeyV:0x2A,KeyW:0x1D,KeyX:0x22,
-  KeyY:0x35,KeyZ:0x1A,
-  Digit1:0x16,Digit2:0x1E,Digit3:0x26,Digit4:0x25,Digit5:0x2E,
-  Digit6:0x36,Digit7:0x3D,Digit8:0x3E,Digit9:0x46,Digit0:0x45,
-  Enter:0x5A,Escape:0x76,Backspace:0x66,Tab:0x0D,Space:0x29,
-  Minus:0x4E,Equal:0x55,BracketLeft:0x54,BracketRight:0x5B,Backslash:0x5D,
-  Semicolon:0x4C,Quote:0x52,Backquote:0x0E,Comma:0x41,Period:0x49,Slash:0x4A,
-  ShiftLeft:0x12,ShiftRight:0x59,ControlLeft:0x14,AltLeft:0x11,
-};
-
-window.addEventListener('error', e => stat.textContent = t({ en: 'ERROR: ', ru: 'ОШИБКА: ' }) + e.message);
-window.addEventListener('unhandledrejection', e => stat.textContent = t({ en: 'REJECTED: ', ru: 'ОТКАЗ: ' }) + (e.reason?.message || e.reason));
-
-stat.textContent = t({ en: 'starting WASM…', ru: 'инициализация WASM…' });
-const M = await OberonRISC5();
-stat.textContent = t({ en: 'WASM loaded, fetching the image…', ru: 'WASM загружен, тяну образ…' });
-const promText = await (await fetch('prom_sd.mem')).text();
-const promArr = new Uint32Array(promText.trim().split('\n').map(l => parseInt(l,16)));
-const imgBuf  = new Uint8Array(await (await fetch('oberon.dsk')).arrayBuffer());
-
-const pProm = M._malloc(promArr.length*4); M.HEAPU8.set(new Uint8Array(promArr.buffer), pProm);
-const pImg  = M._malloc(imgBuf.length);    M.HEAPU8.set(imgBuf, pImg);
-M._soc_init(pProm, promArr.length, pImg, imgBuf.length);
-// soc_init копирует оба буфера к себе — держать их дальше незачем (найдено аудитом).
-M._free(pProm); M._free(pImg);
-
-stat.textContent = t({ en: 'system initialised', ru: 'система инициализирована' });
-const heap32 = M.HEAPU32 || new Uint32Array(M.wasmMemory.buffer);
-const fbPtr = M._soc_framebuffer(), fbN = M._soc_fb_words();
-if (!heap32) throw new Error(t({ en: 'no access to the WASM heap', ru: 'нет доступа к куче WASM' }));
-// ВАЖНО: при ALLOW_MEMORY_GROWTH буфер может быть заменён, поэтому вид
-// на кадровый буфер строим заново на каждом кадре, а не один раз.
-const fbView = () => new Uint32Array((M.HEAPU32 || heap32).buffer, fbPtr, fbN);
-
-// ── ввод ─────────────────────────────────────────────────────────────────────
-let mx = 512, my = 384, btn = 0;
-function pushMouse() {
-  M._soc_mouse(mx, 767 - my, btn);
-  bi[0].classList.toggle('on', !!(btn & 4));
-  bi[1].classList.toggle('on', !!(btn & 2));
-  bi[2].classList.toggle('on', !!(btn & 1));
-}
-function btnsFrom(e) {
-  // Источник истины — e.buttons (битовая маска), а не отдельные события:
-  // Оберону нужно ОДНОВРЕМЕННОЕ состояние трёх кнопок для межкнопочных щелчков.
-  let b = 0;
-  if (e.buttons & 1) b |= (e.altKey ? 2 : forcedBtn);  // Alt всегда даёт среднюю
-  if (e.buttons & 4) b |= 2;                     // настоящая средняя
-  if (e.buttons & 2) b |= 1;                     // правая
-  return b;
-}
-// Межкнопочный щелчок: часть системы требует две кнопки сразу (вторая отметка
-// в рисовалке — левая, к которой добавили правую). На трекпаде так не нажать,
-// поэтому с Shift аккорд собирается здесь, в правильном порядке.
-let chord = false;
-cv.addEventListener('mousemove', e => {
-  const r = cv.getBoundingClientRect();
-  mx = Math.round((e.clientX - r.left) * W / r.width);
-  my = Math.round((e.clientY - r.top) * H / r.height);
-  if (chord && (e.buttons & 1)) { pushMouse(); return; }
-  chord = false; btn = btnsFrom(e); pushMouse();
+stat.textContent = t({ en: 'starting…', ru: 'запуск…' });
+m.addEventListener('oberon-ready', () => {
+  stat.textContent = t({ en: 'system initialised', ru: 'система инициализирована' });
 });
-cv.addEventListener('mousedown', e => {
-  e.preventDefault(); cv.setPointerCapture?.(e.pointerId ?? 1);
-  if (e.shiftKey && !e.altKey && (e.buttons & 1)) {
-    chord = true;
-    btn = 4; pushMouse(); M._soc_run(20000);
-    btn = 5; pushMouse();
-    return;
-  }
-  chord = false; btn = btnsFrom(e); pushMouse();
+m.addEventListener('oberon-frame', e => {
+  const d = e.detail;
+  stat.textContent = `${(d.insns / 1e6).toFixed(1)} ${t({ en: 'M instructions', ru: 'млн инструкций' })}`
+    + ` · ${d.mhz.toFixed(2)} ${t({ en: 'MHz-equiv', ru: 'МГц-экв' })}`
+    + ` · PC=${d.pc.toString(16).toUpperCase()}`;
 });
-window.addEventListener('mouseup', e => { chord = false; btn = btnsFrom(e); pushMouse(); });
-cv.addEventListener('contextmenu', e => e.preventDefault());
-cv.addEventListener('auxclick', e => e.preventDefault());
-
-
-// ⚠ Обработчики висят на всём окне, а не на канве, и глушили КАЖДОЕ нажатие,
-// код которого есть в таблице PS/2. Отсюда два следствия, найденных на живом
-// сайте: не работало копирование (Cmd/Ctrl+C), и — хуже — нельзя было вписать
-// адрес в поля лабораторной, то есть задание с записью в память не делалось
-// вовсе. Проверки лабораторных этого не ловили: они дёргают машину напрямую,
-// минуя DOM.
-//
-// Клавиатура уходит машине, только если человек не печатает в поле ввода и не
-// держит системный модификатор. Оберону ни Cmd, ни Ctrl для ввода не нужны.
-function typingElsewhere(e) {
-  const t = e.target;
-  if (!t) return false;
-  if (t.isContentEditable) return true;
-  const tag = t.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
-}
-function keyGoesToBrowser(e) {
-  return e.metaKey || e.ctrlKey || typingElsewhere(e);
-}
-addEventListener('keydown', e => {
-  if (keyGoesToBrowser(e)) return;
-  const c = PS2[e.code]; if (c === undefined) return;
-  e.preventDefault(); M._soc_key(c);
-});
-addEventListener('keyup', e => {
-  if (keyGoesToBrowser(e)) return;
-  const c = PS2[e.code]; if (c === undefined) return;
-  e.preventDefault(); M._soc_key(0xF0); M._soc_key(c);
+m.addEventListener('oberon-error', e => {
+  stat.textContent = t({ en: 'ERROR: ', ru: 'ОШИБКА: ' }) + e.detail;
 });
 
-// ── цикл ─────────────────────────────────────────────────────────────────────
-// Квота тактов на кадр вместо «крутись сколько сможешь»: иначе вкладка держит
-// ядро на 100% постоянно. Плюс полная остановка, когда вкладка скрыта.
-const QUOTA = 70000;               // ~4.2 МГц / 60 кадров
-let t0 = performance.now(), c0 = 0, booted = false;
-window.__frames = 0; window.__err = null;
-function frame() {
-  window.__frames++;
-  try {
-  if (!document.hidden) {
-    M._soc_run(QUOTA);
-    draw(fbView());
-    const now = performance.now(), cyc = M._soc_cycles();
-    if (now - t0 > 500) {
-      const mhz = (cyc - c0) / (now - t0) / 1000;
-      stat.textContent =
-        `${(M._soc_insns()/1e6).toFixed(1)} ${t({ en: 'M instructions', ru: 'млн инструкций' })}`
-        + ` · ${mhz.toFixed(2)} ${t({ en: 'MHz-equiv', ru: 'МГц-экв' })}`
-        + ` · PC=${M._soc_pc().toString(16).toUpperCase()}`;
-      t0 = now; c0 = cyc;
-    }
-  }
-  } catch (e) { window.__err = String(e && e.stack || e); stat.textContent = t({ en: 'LOOP FAILED: ', ru: 'СБОЙ В ЦИКЛЕ: ' }) + e; return; }
-  raf = requestAnimationFrame(frame);
-}
+// Подсветка нажатых кнопок: состояние мыши знает компонент, наружу оно ходит
+// тем же событием, что и темп.
+m.addEventListener('oberon-buttons', e => {
+  bi[0].classList.toggle('on', !!(e.detail & 4));
+  bi[1].classList.toggle('on', !!(e.detail & 2));
+  bi[2].classList.toggle('on', !!(e.detail & 1));
+});
 
-// БАГ, пойманный на практике: если вкладка СТАРТУЕТ скрытой, браузер не вызывает
-// requestAnimationFrame вовсе — и цепочка кадров не начинается никогда, даже когда
-// вкладку потом открывают. Поэтому перезапуск по событию видимости обязателен.
-let raf = 0;
-function kick() {
-  if (document.hidden) return;
-  if (raf) cancelAnimationFrame(raf);
-  raf = requestAnimationFrame(frame);
-}
-document.addEventListener('visibilitychange', kick);
-
-// Отладочный хук: прокрутить N инструкций и отрисовать, не дожидаясь кадра.
-// Нужен, чтобы проверять страницу в автоматизации, где вкладка скрыта.
-window.__step = (n) => { M._soc_run(n | 0); draw(fbView()); return M._soc_insns(); };
-
-stat.textContent = document.hidden
-  ? t({ en: 'tab hidden — waiting', ru: 'вкладка скрыта — ждём' })
-  : t({ en: 'starting the loop…', ru: 'цикл запускается…' });
-pushMouse();
-kick();
-
-document.getElementById('btn').onchange = e => { forcedBtn = +e.target.value; };
+document.getElementById('btn').onchange = e => m.setButton(+e.target.value);
 
 // Масштаб экрана, выбор запоминается между заходами.
 {
-  const wrap = document.getElementById('wrap'), z = document.getElementById('zoom');
+  const z = document.getElementById('zoom');
   const apply = k => {
     wrap.style.setProperty('--k', k);
-    // Прилипание держим только пока экран влезает в окно.
     wrap.style.position = (k > 1.25 ? 'static' : 'sticky');
   };
   try {

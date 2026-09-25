@@ -67,3 +67,10 @@ jobs:
       - name: Лаборатории
         run: node labs-test.mjs
         working-directory: impl/web
+
+      # Протокол между страницей и рабочим потоком. Разойтись они могут молча:
+      # картинка просто перестанет обновляться, и ни одна другая проверка
+      # этого не увидит.
+      - name: Протокол рабочего потока
+        run: node worker-test.mjs
+        working-directory: impl/web

@@ -8,7 +8,6 @@ ext/norebo/norebo.bin
 ext/norebo/norebo.orig.bin
 ext/refemu/refboot
 ext/refemu/reftrace
-web/oberon.dsk.gz
 
 # ⚠ risc5.js, risc5.wasm, oberon.dsk и prom_sd.mem НЕ игнорируются: GitHub Pages
 # раздаёт статику как есть, а собрать wasm на раскладке нечем — нужны verilator и

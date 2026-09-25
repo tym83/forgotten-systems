@@ -152,8 +152,12 @@ export class Machine {
   }
 }
 
-/** Отрисовка кадрового буфера на канву и подключение мыши с клавиатурой. */
-export function attach(machine, canvas) {
+/**
+ * Развёртка кадрового буфера на канву. Отдельно от машины: в неё приезжает
+ * СЫРОЙ буфер, по биту на точку, откуда угодно — из машины в этом же потоке
+ * или из рабочего потока сообщением.
+ */
+export function makeRenderer(canvas) {
   const ctx = canvas.getContext('2d', { alpha: false });
   const img = ctx.createImageData(W, H);
   const px = new Uint32Array(img.data.buffer);
@@ -162,8 +166,9 @@ export function attach(machine, canvas) {
     for (let k = 0; k < 8; k++)
       LUT[b * 8 + k] = (b >> k) & 1 ? 0xFF000000 : 0xFFFFFFFF;   // 1 — чёрный
 
-  function draw() {
-    const fb = machine.fb();
+  // Кадровый буфер хранится СНИЗУ ВВЕРХ (VID.v: vidadr = Org + {3'b0, ~vcnt, hword}),
+  // поэтому строки при отрисовке переворачиваются.
+  return function draw(fb) {
     for (let y = 0; y < H; y++) {
       const src = (767 - y) * 32, dst = y * W;
       for (let w = 0; w < 32; w++) {
@@ -176,10 +181,19 @@ export function attach(machine, canvas) {
       }
     }
     ctx.putImageData(img, 0, 0);
-  }
+  };
+}
 
+/**
+ * Мышь и клавиатура канвы. Ввод уходит в `sink` — им может быть машина в этом
+ * же потоке или рабочий поток за `postMessage`. Координаты отдаются уже в
+ * системе Оберона (снизу вверх).
+ *
+ * sink: { mouse(x, y, btn), key(code), chord(x, y, first, then) }
+ */
+export function bindInput(canvas, sink) {
   let mx = 512, my = 384, btn = 0;
-  const push = () => machine.mouse(mx, 767 - my, btn);
+  const push = () => sink.mouse(mx, 767 - my, btn);
   // Какой кнопкой Оберона считать физическую левую. 4 — левая, 2 — средняя,
   // 1 — правая (нумерация Input.Mod).
   //
@@ -189,7 +203,6 @@ export function attach(machine, canvas) {
   // ни выделить, ни, например, сменить шрифт через Edit.ChangeFont — команда
   // работает по выделению.
   let forced = 4;
-  machine.setButton = b => { forced = b; };
 
   const btnsFrom = e => {
     // Источник истины — e.buttons: Оберону нужно ОДНОВРЕМЕННОЕ состояние
@@ -219,9 +232,8 @@ export function attach(machine, canvas) {
   canvas.addEventListener('mousedown', e => {
     e.preventDefault();
     if (e.shiftKey && !e.altKey && (e.buttons & 1)) {
-      chord = true;
-      btn = 4; push(); machine.run(20000);    // сперва левая
-      btn = 4 | 1; push();                    // и к ней правая
+      chord = true; btn = 4 | 1;
+      sink.chord(mx, 767 - my, 4, 4 | 1);   // сперва левая, затем к ней правая
       return;
     }
     chord = false; btn = btnsFrom(e); push();
@@ -252,13 +264,29 @@ export function attach(machine, canvas) {
   addEventListener('keydown', e => {
     if (keyGoesToBrowser(e)) return;
     const c = PS2[e.code]; if (c === undefined) return;
-    e.preventDefault(); machine.key(c);
+    e.preventDefault(); sink.key(c);
   });
   addEventListener('keyup', e => {
     if (keyGoesToBrowser(e)) return;
     const c = PS2[e.code]; if (c === undefined) return;
-    e.preventDefault(); machine.key(0xF0); machine.key(c);
+    e.preventDefault(); sink.key(0xF0); sink.key(c);
   });
+
+  return { setButton(b) { forced = b; } };
+}
+
+/** Отрисовка кадрового буфера на канву и подключение мыши с клавиатурой. */
+export function attach(machine, canvas) {
+  const render = makeRenderer(canvas);
+  const draw = () => render(machine.fb());
+  const input = bindInput(canvas, {
+    mouse: (x, y, b) => machine.mouse(x, y, b),
+    key: c => machine.key(c),
+    chord: (x, y, first, then) => {
+      machine.mouse(x, y, first); machine.run(20000); machine.mouse(x, y, then);
+    },
+  });
+  machine.setButton = b => input.setButton(b);
 
   let raf = 0, running = false;
   const QUOTA = 70000;      // ~4.2 МГц при 60 кадрах; без квоты вкладка жрёт ядро
