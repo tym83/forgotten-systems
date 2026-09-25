@@ -1,0 +1,157 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The compiler from inside</title>
+<style>
+:root { color-scheme: light dark; --bg:#f6f6f4; --fg:#1a1a1a; --mut:#666;
+        --line:#d8d8d4; --acc:#2b5fa8; --code:#eceae5; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#16181c; --fg:#e6e6e6; --mut:#9aa0a6; --line:#2e3238;
+          --acc:#7aa7e8; --code:#20242a; } }
+* { box-sizing:border-box }
+body { margin:0; background:var(--bg); color:var(--fg);
+       font:16px/1.65 ui-serif,Georgia,"Times New Roman",serif; }
+.wrap { display:grid; grid-template-columns:240px minmax(0,72ch); gap:40px;
+        max-width:1100px; margin:0 auto; padding:28px 20px 80px }
+@media (max-width:900px) { .wrap { grid-template-columns:1fr; gap:16px } }
+nav { position:sticky; top:20px; align-self:start;
+      font:13px/1.5 ui-sans-serif,system-ui,sans-serif }
+nav a { display:block; padding:3px 0; color:var(--mut); text-decoration:none }
+nav a:hover { color:var(--acc) }
+nav a.cur { color:var(--fg); font-weight:600 }
+nav .top { font-weight:600; color:var(--fg); margin-bottom:10px; display:block }
+h1 { font-size:26px; line-height:1.25; margin:0 0 24px }
+h2 { font-size:20px; margin:32px 0 10px }
+h3 { font-size:17px; margin:24px 0 8px }
+p, li { margin:0 0 12px }
+ul, ol { padding-left:24px }
+a { color:var(--acc) }
+code { font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+       background:var(--code); padding:1px 4px; border-radius:3px }
+pre { background:var(--code); padding:12px 14px; border-radius:7px;
+      overflow-x:auto; border:1px solid var(--line) }
+pre code { background:none; padding:0; font-size:12.5px }
+table { border-collapse:collapse; width:100%; font-size:14px; margin:0 0 16px;
+        display:block; overflow-x:auto }
+th, td { border:1px solid var(--line); padding:6px 9px; text-align:left }
+th { background:var(--code) }
+blockquote { margin:0 0 14px; padding:8px 14px; border-left:3px solid var(--line);
+             color:var(--mut) }
+.foot { margin-top:48px; padding-top:16px; border-top:1px solid var(--line);
+        display:flex; justify-content:space-between;
+        font:14px ui-sans-serif,system-ui,sans-serif }
+</style>
+<div class="wrap">
+<nav><a class="top" href="index.html">Oberon: the handbook</a><a class="" href="01-zachem.html">What this is for, and what here is real</a><a class="" href="02-mashina.html">The machine: RISC5</a><a class="" href="03-yazyk.html">The language: Oberon in one chapter</a><a class="" href="04-sistema.html">The system: text instead of buttons</a><a class="" href="05-moduli.html">Modules, symbol files and keys</a><a class="cur" href="06-kompilyator.html">The compiler from inside</a><a class="" href="07-samoraskrutka.html">Self-hosting and the fixed point</a><a class="" href="08-izmereno.html">What we measured and what we found</a><a href="../../lab.html" style="margin-top:14px">→ Labs</a></nav>
+<article><h1>The compiler from inside</h1>
+<p>The Oberon compiler is four modules, a hundred and nine kilobytes of source.
+It can be read over a weekend, and that is perhaps the main reason to take this
+system in particular: the whole path from text to machine code is in view.</p>
+<table>
+<thead><tr><th>module</th><th>size</th><th>what it does</th></tr></thead>
+<tbody>
+<tr><td><code>ORS</code></td><td>11 kB</td><td>scanner: text → tokens</td></tr>
+<tr><td><code>ORB</code></td><td>17 kB</td><td>the table of names and types, reading and writing symbol files</td></tr>
+<tr><td><code>ORG</code></td><td>39 kB</td><td>code generator: items → RISC5 instructions</td></tr>
+<tr><td><code>ORP</code></td><td>42 kB</td><td>the parser; it also drives everything else</td></tr>
+</tbody>
+</table>
+<p>The scheme has no intermediate representation: <strong>parsing emits code
+directly</strong>. <code>ORP</code> reads a token, works out what it is, and calls <code>ORG</code> on the
+spot to emit instructions. No tree, no optimisation passes. Hence the speed: the
+whole system rebuilds in minutes on a four-megahertz machine.</p>
+<h2>The item</h2>
+<p>The central notion of the code generator is the <strong>item</strong>. It describes where a
+value currently is: in a register, in memory at an offset from a base, in an
+instruction's immediate field, or as a branch condition not yet evaluated.</p>
+<pre><code class="language-oberon">Item = RECORD
+  mode: INTEGER;      (* where it sits: Const, Var, Par, Reg, RegI, Cond *)
+  type: ORB.Type;
+  a, b, r: LONGINT;   (* offset, base, register *)
+  rdo: BOOLEAN        (* read-only *)
+END
+</code></pre>
+<p>Code generation is a matter of moving an item from one state to another.
+<code>load(x)</code> drags the value into a register if it is not there already. Register
+allocation is a simple stack: <code>RH</code> ("register high") points at the first free
+one, <code>incR</code> and <code>DEC(RH)</code> move it.</p>
+<h2>How <code>a[i]</code> becomes instructions</h2>
+<p>A good example, because the whole style shows in it. The <code>Index</code> procedure in
+<code>ORG.Mod</code>:</p>
+<ol>
+<li>
+<p><strong>If the index is a constant</strong> and the array length is known, the bounds are
+   checked at compile time (<code>bad index</code>) and the offset is simply added to the
+   address. Not a single instruction at run time.</p>
+</li>
+<li>
+<p><strong>Otherwise the index is loaded into a register</strong> and a bounds check is
+   inserted:</p>
+</li>
+</ol>
+<p><code>Put1a(Cmp, RH, y.r, lim)     ; compare the index against the length
+   Trap(10, 1)                  ; if not below — trap number 1</code></p>
+<p><code>Cmp</code> is a <code>Sub</code> whose destination is discarded: only the flags are wanted.
+   <code>Trap(10, 1)</code> gives a branch-with-link through the <code>MT</code> register on condition
+   <code>CC</code>, with error number 1 in the body of the instruction.</p>
+<ol start="3">
+<li>
+<p><strong>The index is multiplied by the element size.</strong> For four-byte elements that
+   is a left shift by two (<code>Lsl</code>); for the rest, a real multiplication.</p>
+</li>
+<li>
+<p><strong>The offset is added to the base</strong>, giving the address.</p>
+</li>
+</ol>
+<p>So every index operation with a variable subscript costs <strong>two extra
+instructions</strong>: a comparison and a conditional branch. How much that is in
+practice is in the chapter <a href="08-izmereno.html">what we measured</a>.</p>
+<p>For an open array the length is not known at compile time and has to be read
+from the stack, where it sits beside the parameter itself.</p>
+<h2>Traps</h2>
+<p>All run-time checks are built the same way: a comparison, then a conditional
+branch through <code>MT</code> with a link. Into the instruction's spare bits the code
+generator puts the position in the source and the error number:</p>
+<pre><code class="language-oberon">PROCEDURE Trap(cond, num: LONGINT);
+BEGIN Put3(BLR, cond, ORS.Pos()*100H + num*10H + MT)
+END Trap;
+</code></pre>
+<p>The hardware ignores those bits — to it this is an ordinary branch through a
+register. The trap handler digs them out by reading the instruction that broke.
+The trick is economical: no address table, no separate structures — all the
+information about the error is already in the instruction.</p>
+<p>The numbers you will meet most often:</p>
+<table>
+<thead><tr><th>number</th><th>meaning</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>index out of array bounds</td></tr>
+<tr><td>2</td><td>type test failed</td></tr>
+<tr><td>3</td><td>assignment of an array or record of incompatible size</td></tr>
+<tr><td>4</td><td><code>NIL</code> dereference</td></tr>
+<tr><td>5</td><td>call of a procedure variable equal to <code>NIL</code></td></tr>
+<tr><td>6</td><td>division by zero</td></tr>
+<tr><td>7</td><td><code>ASSERT</code> did not hold</td></tr>
+</tbody>
+</table>
+<h2>Fixups</h2>
+<p>The compiler emits code in one pass, so when a procedure declared further down
+is called, its address is not yet known. The solution is classical: the offset
+field holds a reference to the previous such place, forming a chain. Once the
+address is known, <code>FixLink</code> walks the chain and substitutes the real value.</p>
+<p>The loader does the same for calls into other modules: the object file holds
+chains that <code>Modules</code> patches up on loading. That is why in an <code>.rsc</code> a branch
+field is not yet an offset but a fixup record.</p>
+<h2>What is worth reading yourself</h2>
+<p>If you take on the source, a sensible order is:</p>
+<ol>
+<li><code>ORS.Mod</code> entire — it is small and sets the vocabulary.</li>
+<li>In <code>ORB.Mod</code> — <code>Import</code> and <code>Export</code>: how a symbol file is built.</li>
+<li>In <code>ORG.Mod</code> — <code>Item</code>, <code>load</code>, <code>Index</code>, <code>Trap</code>, <code>Put0</code>…<code>Put3</code>. That is the core.</li>
+<li>In <code>ORP.Mod</code> — <code>expression</code>, <code>StatSequence</code>: you will see parsing and code
+   generation proceeding in one motion.</li>
+</ol>
+<p>The four modules you are reading are the very ones that build themselves. That
+is the <a href="07-samoraskrutka.html">next chapter</a>.</p><div class="foot"><span><a href="05-moduli.html">← Modules, symbol files and keys</a></span><span><a href="07-samoraskrutka.html">Self-hosting and the fixed point →</a></span></div>
+
+</article>
+</div>
