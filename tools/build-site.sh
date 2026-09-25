@@ -42,10 +42,11 @@ cp impl/web/index.html "$out/oberon/run.html"
 # Обязательный состав. Пустой файл — тоже отсутствие: собранный wasm умеет
 # получиться нулевым, и один раз уже получился.
 need="index.html style.css ru/index.html ru/oberon/index.html
-      oberon/index.html oberon/run.html oberon/lab.html
+      oberon/index.html oberon/run.html oberon/lab.html oberon/embed.html
       oberon/i18n.js oberon/labs.js oberon/labs.en.js
       oberon/machine.js oberon/oberonfs.js
-      oberon/risc5.js oberon/risc5.wasm oberon/oberon.dsk oberon/prom_sd.mem
+      oberon/risc5.js oberon/risc5.wasm oberon/oberon.dsk oberon/oberon.dsk.gz
+      oberon/prom_sd.mem oberon/embed.js oberon/worker.js oberon/worker-core.js
       oberon/book/index.html oberon/book/en/index.html"
 miss=0
 for f in $need; do

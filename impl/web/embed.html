@@ -1,0 +1,53 @@
+<!doctype html>
+<meta charset="utf-8">
+<title data-i18n-en="Embedding the machine">Встройка машины</title>
+<style>
+  body { margin:0 auto; max-width:860px; padding:24px 16px 60px;
+         background:#141414; color:#ddd; font:15px/1.6 system-ui,sans-serif }
+  h1 { font-size:20px; margin:0 0 4px }
+  p  { color:#a8a8a8 }
+  pre { background:#1e1e1e; border:1px solid #2e2e2e; border-radius:8px;
+        padding:12px 14px; overflow:auto; font:12px/1.5 ui-monospace,Menlo,monospace; color:#cfcfcf }
+  oberon-machine { display:block; box-shadow:0 0 0 1px #333; margin:18px 0 }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:13px; color:#8a8a8a }
+  button { font:inherit; background:#2b2b2b; color:#ddd; border:1px solid #444;
+           border-radius:6px; padding:6px 12px; cursor:pointer }
+</style>
+
+<h1 data-i18n-en="The machine as a component">Машина как компонент</h1>
+<p data-i18n-en="Two lines put a whole computer — processor, compiler and operating system — into any page. Nothing is required of the host page: no build step, no headers, no framework.">
+Две строки вставляют целый компьютер — процессор, компилятор и операционную
+систему — в любую страницу. От принимающей страницы не требуется ничего: ни
+сборки, ни заголовков, ни фреймворка.</p>
+
+<pre>&lt;script type="module" src="https://tym83.github.io/paleocomputing/oberon/embed.js"&gt;&lt;/script&gt;
+&lt;oberon-machine base="https://tym83.github.io/paleocomputing/oberon/"&gt;&lt;/oberon-machine&gt;</pre>
+
+<oberon-machine id="m"></oberon-machine>
+
+<div class="row">
+  <button id="start" data-i18n-en="Start">Запустить</button>
+  <button id="stop" data-i18n-en="Pause">Пауза</button>
+  <button id="reset" data-i18n-en="Reset">Откатить</button>
+  <span id="stat"></span>
+</div>
+
+<p data-i18n-en="The machine runs in a worker: the emulator does not compete with the page for the main thread, and scrolling stays smooth. It stops on its own when the tab is hidden or the element scrolls out of view — the RTL model has no idle heuristic and would otherwise burn a core.">
+Машина считает в отдельном потоке: эмулятор не отбирает у страницы главный
+поток, и прокрутка не дёргается. Когда вкладка скрыта или элемент ушёл за край
+окна, машина сама останавливается — у модели RTL нет эвристики простоя, и иначе
+она жгла бы ядро впустую.</p>
+
+<script type="module">
+import { applyMarkup } from './i18n.js';
+import './embed.js';
+applyMarkup(document);
+
+const m = document.getElementById('m'), stat = document.getElementById('stat');
+if (document.documentElement.lang === 'ru') m.setAttribute('start-label', 'Запустить машину');
+document.getElementById('start').onclick = () => m.start();
+document.getElementById('stop').onclick  = () => m.stop();
+document.getElementById('reset').onclick = () => m.reset();
+m.addEventListener('oberon-frame', e =>
+  stat.textContent = `${(e.detail.insns / 1e6).toFixed(1)}M · ${e.detail.mhz.toFixed(2)} MHz`);
+</script>

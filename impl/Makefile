@@ -43,7 +43,7 @@ ext/refemu/reftrace: ext/refemu/trace.c ext/refemu/risc.c ext/refemu/risc-fp.c e
 VINC := $(shell verilator --getenv VERILATOR_ROOT)/include
 WASM_SRC := $$(ls build/obj_wasm/*.cpp | grep -v "__Dpi\.cpp$$")
 
-web: web/risc5.js web/prom_sd.mem web/oberon.dsk
+web: web/risc5.js web/prom_sd.mem web/oberon.dsk web/oberon.dsk.gz
 
 build/obj_wasm/VRISC5.cpp: $(RTL)
 	@verilator -Wno-fatal --cc --public-flat-rw --Mdir build/obj_wasm --top-module RISC5 $(RTL)
@@ -63,6 +63,12 @@ web/prom_sd.mem: rtl/prom_sd.mem
 	@cp $< $@
 web/oberon.dsk: ext/disk/Oberon-2016-08-02.dsk
 	@cp $< $@
+
+# Сжатый образ для страницы: GitHub Pages не отдаёт ни brotli, ни gzip на лету,
+# поэтому мегабайт сжимаем заранее, а распаковывает его сам браузер
+# (DecompressionStream). Несжатый остаётся для тех, у кого его нет.
+web/oberon.dsk.gz: web/oberon.dsk
+	@gzip -9 -n -c $< > $@
 
 # Проверка окружения: без этого ошибки вылезают посреди сборки
 deps:
@@ -258,6 +264,7 @@ site: web book
 # из «не сделано» в «сделано» от предусмотренных действий.
 labs: web book
 	@cd web && node labs-test.mjs
+	@cd web && node worker-test.mjs
 
 # Полная пересборка системы Обероном внутри самой системы на RTL.
 # Три сессии: пачками, затем поодиночке то, что упало в ловушку 4 (исчерпание
