@@ -90,6 +90,32 @@ jobs:
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             "${{ steps.meta.outputs.image }}@${{ steps.build.outputs.digest }}"
 
+      # ⚠ Проверяем СОДЕРЖИМОЕ, а не факт сборки.
+      #
+      # Образ раздачи однажды вышел без машины: risc5.wasm и oberon.dsk —
+      # продукты сборки, они в .gitignore, и `COPY web/` копировал то, чего
+      # нет. Страница отдавалась, код ответа 200, размер верный — и в кластере
+      # это выглядело успехом, пока никто не попробовал её открыть.
+      #
+      # Отсюда правило: после выкладки лезть внутрь и смотреть, что там лежит.
+      - name: Проверить, что в образе есть чем работать
+        run: |
+          set -euo pipefail
+          ref="${{ steps.meta.outputs.image }}@${{ steps.build.outputs.digest }}"
+          case "${{ matrix.name }}" in
+            oberon-web) want="risc5.wasm risc5.js oberon.dsk prom_sd.mem lab.html"
+                        dir=/usr/share/nginx/html ;;
+            oberon-run) want="prom.bin oberon.dsk"
+                        dir=/opt/oberon/payload ;;
+            *)          want=""; dir="" ;;
+          esac
+          [ -n "$want" ] || { echo "для ${{ matrix.name }} проверки содержимого нет"; exit 0; }
+          for f in $want; do
+            docker run --rm --entrypoint sh "$ref" -c "test -s $dir/$f" \
+              || { echo "❌ в образе нет $dir/$f"; exit 1; }
+            echo "  ✅ $f"
+          done
+
       - name: Итог
         run: |
           echo "### ${{ matrix.name }}" >> "$GITHUB_STEP_SUMMARY"

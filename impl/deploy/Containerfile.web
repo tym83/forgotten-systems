@@ -6,9 +6,34 @@
 # пользователя 101, то есть под обычными ограничениями кластера ему не нужен
 # ни рут, ни записываемый корень. Конфигурация лежит в образе и НЕ должна
 # перекрываться томом — иначе потеряется тип для wasm.
+# ⚠ Машина собирается ЗДЕСЬ, а не приносится готовой.
+#
+# risc5.js, risc5.wasm, prom_sd.mem и oberon.dsk — продукты сборки, они в
+# .gitignore. Прежний образ копировал каталог web/ как есть и получался БЕЗ
+# машины: страница отдавалась, а заводить на ней было нечего. В кластере это
+# выглядело как успех — код ответа 200 и верный размер страницы, — и потому
+# держалось незамеченным. Проверка смотрела на форму, а не на поведение.
+FROM docker.io/library/debian:bookworm-slim AS machine
+RUN apt-get update -q && apt-get install -y -q --no-install-recommends \
+      verilator g++ make python3 ca-certificates git \
+ && rm -rf /var/lib/apt/lists/*
+# Emscripten ставим отдельно: в дистрибутиве его нет.
+RUN git clone --depth 1 https://github.com/emscripten-core/emsdk.git /emsdk \
+ && /emsdk/emsdk install latest && /emsdk/emsdk activate latest
+WORKDIR /src
+COPY rtl/ ./rtl/
+COPY tb/ ./tb/
+COPY ext/disk/ ./ext/disk/
+COPY Makefile ./
+RUN mkdir -p web && . /emsdk/emsdk_env.sh && make web \
+ && ls -la web/risc5.js web/risc5.wasm web/oberon.dsk web/prom_sd.mem
+
 FROM nginxinc/nginx-unprivileged:1.29-alpine
 
 COPY --chown=101:101 web/ /usr/share/nginx/html/
+# Машина кладётся поверх: страницы приходят из репозитория, машина из сборки.
+COPY --from=machine --chown=101:101 /src/web/risc5.js /src/web/risc5.wasm \
+     /src/web/prom_sd.mem /src/web/oberon.dsk /usr/share/nginx/html/
 
 # WASM без правильного типа браузер отказывается компилировать потоком.
 #
