@@ -1,0 +1,85 @@
+# Тяжёлые проверки: настоящий RTL и цель QEMU.
+#
+# Почему отдельно и не на каждый пуш: здесь собираются verilator и QEMU, и
+# прогоны идут десятками минут. Быстрые проверки живут в check.yml и остаются
+# быстрыми — иначе их начинают ждать, а потом и обходить.
+#
+# ⚠ До этого RTL и QEMU не проверялись автоматически ВООБЩЕ: это было записано
+# только комментарием в другом workflow. Комментарий проверок не заменяет.
+name: hardware
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Раз в неделю, ночью с воскресенья на понедельник по UTC.
+    - cron: '17 3 * * 1'
+  pull_request:
+    # На правки самого железа и оснастки — обязательно.
+    paths:
+      - 'impl/rtl/**'
+      - 'impl/tb/**'
+      - 'impl/tools/asm.py'
+      - 'qemu/**'
+      - '.github/workflows/hardware.yml'
+
+jobs:
+  rtl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verilator
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends verilator >/dev/null
+          verilator --version
+
+      # Направленные тесты ISA на обоих ядрах плюс проверка эквивалентности
+      # декодера: занятие чужой кодировки в RISC5 проявилось бы молчаливым
+      # изменением поведения старого кода.
+      - name: Тесты системы команд
+        run: make test
+        working-directory: impl
+
+      # Система грузится на настоящем RTL, и контрольная сумма экрана обязана
+      # совпасть с эталонной — на базовом ядре и на ядре с расширением.
+      - name: Загрузка системы
+        run: make boot boot-chk
+        working-directory: impl
+
+      # Дифференциальный стенд: RTL против эталонного эмулятора, инструкция за
+      # инструкцией, на загрузке настоящей системы.
+      - name: Дифференциальный стенд
+        run: make lockstep
+        working-directory: impl
+
+  qemu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      # Декодер принимается генератором самого QEMU: он ругается, если хоть
+      # один бит команды не расписан, и ровно на этом декодер уже ловился.
+      - name: Декодер
+        run: make check
+        working-directory: qemu
+
+      - name: Сборка цели
+        run: make build
+        working-directory: qemu
+
+      # Главная проверка цели: не «собралось», а «считает то же, что железо».
+      - name: Сверка с моделью, снятой с RTL
+        run: make diff
+        working-directory: qemu
+
+      # Аппаратная проверка границ: та же программа, что считает числа на
+      # странице, в QEMU и на модели с RTL. Плюс отрицательный контроль.
+      # Verilator здесь не нужен: модель, снятая с RTL, лежит в репозитории
+      # собранной (risc5-chk.wasm) — её же отдаёт страница читателю.
+      - name: Сверка расширения ISA
+        run: |
+          make -C impl tests/bench_bounds_e.bin
+          python3 qemu/test/compare_chk.py

@@ -20,6 +20,8 @@
  *   width      ширина канвы в CSS (по умолчанию 100%)
  *
  * Свойства и события: `.start()`, `.stop()`, `.reset()`, `.setButton(n)`,
+ * `.poke(адрес, значение)`, `.check(лаба, шаг, ответ)` — последнее исполняется
+ * рядом с машиной, в потоке, и возвращает обещание;
  * события: `oberon-ready`, `oberon-frame` (раз в полсекунды, с темпом),
  * `oberon-buttons` (состояние кнопок мыши), `oberon-error`.
  */
@@ -109,6 +111,8 @@ class OberonMachine extends HTMLElement {
     this._base = new URL(this.getAttribute('base') || '.', HERE);
     this._running = false;
     this._raf = 0;
+    this._askId = 0;
+    this._waiting = new Map();
 
     // Машина не обязана считать, пока её не видно: вкладка скрыта или элемент
     // ушёл за край окна. Модель RTL не умеет простаивать и жжёт ядро ровно.
@@ -170,6 +174,11 @@ class OberonMachine extends HTMLElement {
       this._kick();
       return;
     }
+    if (msg.t === 'check') {
+      const resolve = this._waiting.get(msg.id);
+      if (resolve) { this._waiting.delete(msg.id); resolve(msg); }
+      return;
+    }
     if (msg.t === 'error') {
       this.dispatchEvent(new CustomEvent('oberon-error', { detail: msg.message }));
       console.error('[oberon]', msg.message);
@@ -183,10 +192,31 @@ class OberonMachine extends HTMLElement {
     const mhz = (msg.cycles - this._c0) / (now - this._t0) / 1000;
     this._t0 = now; this._c0 = msg.cycles;
     this.dispatchEvent(new CustomEvent('oberon-frame', {
-      detail: { insns: msg.insns, mhz, pc: msg.pc } }));
+      detail: { insns: msg.insns, mhz, pc: msg.pc, crc: msg.crc } }));
   }
 
   _send(msg) { if (this._worker && this._ready) this._worker.postMessage(msg); }
+
+  /**
+   * Запрос с ответом. Нужен там, где странице недостаточно кадра: проверка
+   * задания читает состояние машины, а машина живёт в потоке.
+   */
+  _ask(msg) {
+    return new Promise(resolve => {
+      const id = ++this._askId;
+      this._waiting.set(id, resolve);
+      this._send({ ...msg, id });
+    });
+  }
+
+  /** Проверить шаг лабораторной. Считает поток, рядом с машиной. */
+  check(lab, step, answer) { return this._ask({ t: 'check', lab, step, answer }); }
+
+  /** Забыть накопленное состояние лабораторной. */
+  forget(lab) { this._send({ t: 'forget', lab }); }
+
+  /** Записать слово в память машины. */
+  poke(adr, val) { this._send({ t: 'poke', adr, val }); }
 
   /** Просит у потока следующий кадр — если есть кому смотреть. */
   _kick() {

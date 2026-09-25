@@ -67,6 +67,26 @@ say(after.reset === true && after.insns < runFor, `откат возвращае
 await handle({ t: 'таких-не-бывает' });
 say(!!last('error'), 'неизвестное сообщение не проглатывается молча');
 
+// ── лабораторные считаются рядом с машиной ───────────────────────────────────
+// Проверка задания читает регистры, память и экран. Если бы она исполнялась на
+// странице, через границу потока пришлось бы тянуть всё состояние целиком.
+await handle({ t: 'check', id: 10, lab: 1, step: 0 });
+const early = last('check');
+say(early && early.ok === false, 'на пустой машине первый шаг лабы 1 не засчитан');
+
+for (let i = 0; i < 14; i++) {
+  await handle({ t: 'recycle', buf: last('frame').buf });
+  await handle({ t: 'run', quota: 1000000 });
+}
+await handle({ t: 'check', id: 11, lab: 1, step: 0 });
+const grown = last('check');
+say(grown && grown.ok === true, `после загрузки засчитан: ${grown && grown.msg}`);
+
+await handle({ t: 'poke', adr: 0x200, val: 0xC0FFEE });
+await handle({ t: 'peek', id: 12, adr: 0x200 });
+say((last('peek').word >>> 0) === 0xC0FFEE,
+    `записанное слово читается обратно: ${(last('peek').word >>> 0).toString(16).toUpperCase()}`);
+
 // ── второе железо ────────────────────────────────────────────────────────────
 // Ядро с аппаратной проверкой границ обязано гонять ту же систему побитово
 // так же: расширение системы команд, которое меняет поведение старого кода, —
