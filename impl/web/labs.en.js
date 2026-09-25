@@ -41,6 +41,55 @@ export const EN = {
    machine a single <code>lsmod</code> prints a hundred lines, and that is not
    even the system, just a list of its pieces.`,
 
+
+  '2.intro': `Here you will type a module into the system's own editor, save
+    it and compile it. Nothing beyond the mouse and keyboard is needed — the
+    editor, the compiler and the file system are already inside.`,
+
+  '3.intro': `Oberon has no header files: the compiler extracts a module's
+    interface itself and computes a <b>key</b> over it. Every module remembers
+    the keys of everything it imports, and the system checks them when
+    loading. Here you will watch that mechanism catch you in the act.`,
+
+  '4.intro': `This machine has no memory management unit, no protection rings
+    and no privilege separation. Any word of RAM is reachable by any code. The
+    panel on the right writes straight into the machine's memory — exactly what
+    any stray pointer would do.`,
+
+  '5.intro': `This machine has no cache, no branch prediction and no
+    out-of-order execution. Execution time is therefore a matter of a table and
+    does not depend on what the machine happens to be doing. Here you will check
+    that for yourself — the instruction and cycle counters come from the
+    circuit, not from our arithmetic.`,
+
+  '6.intro': `Oberon's garbage collector runs <b>between</b> commands, not
+    inside them. While a command is running, memory is only consumed. Here you
+    will walk into that yourself — and find the way around it.`,
+
+  '7.intro': `The Oberon compiler is written in Oberon and sits on this same
+    disk. Here you will rebuild the <code>Math</code> module and discover that
+    the binary shipped on the image is <b>out of date</b>: it was built by a
+    different version of the compiler than the one on the disk beside it.`,
+
+  '8.intro': `"The compiler builds itself" proves nothing on its own: a
+    compiler with a bug will build itself too. The proof is two generations
+    agreeing. Here you will obtain it by hand.`,
+
+  '9.intro': `Before every index operation with a variable subscript the code
+    generator emits two instructions: a comparison and a conditional branch. One
+    variable named <code>check</code> in <code>ORG.Mod</code> governs this, and
+    it is switched on in an unexpected way.`,
+
+
+  '2.hint': 'A star after a name means it is exported. The full stop after the final END is required. When the compiler objects, it prints the position as a character offset from the start of the file.',
+  '3.hint': 'The key is computed over the interface, not the code: editing the body of a procedure leaves it alone, adding an exported name changes it.',
+  '4.hint': 'Addresses are hexadecimal, without 0x. The instruction counter moves all the time — enter the value you saw at the moment you wrote, and try again if you missed.',
+  '5.hint': 'The counters in the header refresh four times a second. Dividing one by the other can be done in your head: both are shown in millions.',
+  '6.hint': 'All three commands can be typed as three lines at once, then run one after another with a middle click.',
+  '7.hint': 'PIO.rsc is absent from the image to begin with — which is why its appearance is the proof that compilation ran to the end.',
+  '8.hint': 'A tilde at the end is required: it closes the command\'s parameter list.',
+  '9.hint': 'Click to the left of the first character of the second line, but inside the window frame. If the star lands inside a word, the compiler will say "must start with MODULE".',
+
   '2.title': 'Your first module',
   '3.title': 'The interface key',
   '4.title': 'There is no memory protection here',
