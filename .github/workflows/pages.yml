@@ -1,14 +1,17 @@
 # Публикация сайта серии на GitHub Pages.
 #
 # Классический источник Pages умеет отдавать только корень репозитория или
-# /docs, а сайт лежит в /site — там же, где его собирает impl/Makefile.
-# Поэтому раскладка идёт через Actions: содержимое /site уезжает артефактом.
+# /docs, а сайт собирается в /_site — поэтому раскладка идёт через Actions.
+#
+# Сборка — tools/build-site.sh, та же команда, что и локально (`make site` в
+# impl/). Одна команда на два места: раскладка не может разойтись с тем, что
+# видно у себя.
 name: pages
 
 on:
   push:
     branches: [main]
-    paths: ['site/**', '.github/workflows/pages.yml']
+    paths: ['site/**', 'impl/web/**', 'tools/build-site.sh', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 permissions:
@@ -29,9 +32,15 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+
+      # Скрипт же и проверяет состав и местные ссылки: раскладка с битой
+      # ссылкой не уезжает.
+      - name: Собрать сайт
+        run: ./tools/build-site.sh _site
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

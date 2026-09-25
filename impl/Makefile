@@ -13,7 +13,7 @@ TESTS  := t1_latency t1_flags t1_fpb2b t1_fp t1_arith t1_umul t1_probe_flags \
           t1_branch t1_branch_width t1_logic t1_dontcare t1_prime t1_alu_diff1 t1_alu_diff2 t1_shift t1_mem t1_movspec t1_irq
 ASM    := $(patsubst %,tests/%.bin,$(TESTS) t2_chk t2_chk_hi)
 
-.PHONY: all check test roundtrip pristine bootstrap rebuild book labs image lab image-check equiv lockstep lockstep-chk boot boot-chk selfhost syn configs tools web deps clean
+.PHONY: site all check test roundtrip pristine bootstrap rebuild book labs image lab image-check equiv lockstep lockstep-chk boot boot-chk selfhost syn configs tools web deps clean
 all: tools build/obj_tests/run_tests build/obj_chk/run_tests_chk $(ASM)
 
 # ───────────────────────────────────────────────────────────────────────────
@@ -247,6 +247,11 @@ image-check: image
 # главы, потому что выглядит рабочей.
 book:
 	@python3 tools/mkbook.py
+
+# Сайт: то же, что делает раскладка на Pages. Проверяет состав и местные
+# ссылки, поэтому годится как проверка перед пушем, а не только как просмотр.
+site: web book
+	@cd .. && ./tools/build-site.sh _site
 
 # Лаборатории: безголовый прогон сценариев каждой лабы. Проверка, которая
 # всегда зелёная или всегда красная, бесполезна, поэтому тест требует перехода
