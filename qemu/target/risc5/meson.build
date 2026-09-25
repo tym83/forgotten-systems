@@ -13,6 +13,7 @@ risc5_ss.add(gen)
 risc5_ss.add(files(
   'translate.c',
   'helper.c',
+  'fp.c',
   'cpu.c'))
 
 # Ответы наблюдателю нужны только в системной сборке.

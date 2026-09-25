@@ -245,14 +245,33 @@ static void gen_alu(DisasContext *ctx, unsigned a, unsigned b, unsigned op,
         }
         break;
 
+    /*
+     * ── Плавающая точка ───────────────────────────────────────────────────
+     *
+     * Вычитание — то же сложение с перевёрнутым знаком второго слагаемого:
+     * так это и сделано в железе (RISC5.v:64 подаёт `{FSB^C0[31], C0[30:0]}`),
+     * отдельного вычитателя нет.
+     *
+     * У сложения признаки u и v меняют смысл операции целиком — на перевод
+     * целого в дробное и на округление вниз. У умножения и деления их нет.
+     */
+    case 12:
+        gen_helper_fp_add(res, cpu_r[b], c1,
+                          tcg_constant_i32((u ? 1 : 0) | (v ? 2 : 0)));
+        break;
+    case 13: {
+        TCGv_i32 neg = tcg_temp_new_i32();
+        tcg_gen_xori_i32(neg, c1, 0x80000000);
+        gen_helper_fp_add(res, cpu_r[b], neg,
+                          tcg_constant_i32((u ? 1 : 0) | (v ? 2 : 0)));
+        break;
+    }
+    case 14: gen_helper_fp_mul(res, cpu_r[b], c1); break;
+    case 15: gen_helper_fp_div(res, cpu_r[b], c1); break;
+
     default:
-        /*
-         * Плавающая точка (12..15) ещё не написана. Молча возвращать мусор
-         * нельзя: тихо неверный результат хуже отказа.
-         */
-        gen_helper_unimplemented(tcg_env, tcg_constant_i32(op));
-        ctx->base.is_jmp = DISAS_NORETURN;
-        return;
+        /* Сюда попасть нельзя: операций ровно шестнадцать. */
+        g_assert_not_reached();
     }
 
     gen_logic_flags(res);
