@@ -15,6 +15,11 @@ metadata:
   name: {{ include "oberon-vm.fullname" . }}
   labels: {{- include "oberon-vm.labels" . | nindent 4 }}
   annotations:
+    {{- if eq .Values.hardware "chk" }}
+    # Вариант железа. Перехватчик прочитает это и добавит `-machine chk=on`:
+    # то же ядро, что даёт переключатель на странице проекта.
+    oberon.paleocomputing/chk: "on"
+    {{- end }}
     hooks.kubevirt.io/hookSidecars: |
       [{
         "args": ["--version", "v1alpha2"],

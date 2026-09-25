@@ -49,17 +49,28 @@ def in_qemu(binpath, budget, chk):
     data = pathlib.Path(binpath).read_bytes()
     (QEMU / "prog.bin").write_bytes(data)
     flag = ",chk=on" if chk else ""
-    # ⚠ `-d cpu` печатает состояние на КАЖДЫЙ БЛОК трансляции, а не на каждую
-    # команду: без one-insn-per-tb счётчик блоков не равен счётчику команд, и
-    # сравнение молча съезжает. На этом уже терялся целый заход отладки.
-    cmd = (f"cd /src && timeout 300 ./build/qemu-system-risc5 -M oberon{flag} "
+    # ⚠ Журнал НЕ ложится на диск. `-d cpu` с one-insn-per-tb пишет ~230 байт
+    # на команду, а программа после полезной части крутится в пустом цикле —
+    # за минуту это десятки гигабайт. Один раз так и вышло: журнал забил диск
+    # виртуалки докера до отказа, containerd перестал писать даже собственную
+    # базу, и чинилось это только пересозданием машины.
+    #
+    # Поэтому журнал идёт в конвейер: `head` берёт свой кусок и закрывает
+    # трубу, QEMU получает SIGPIPE и умирает сам. На диск не попадает ничего.
+    #
+    # ⚠ И без one-insn-per-tb состояние печатается на КАЖДЫЙ БЛОК трансляции,
+    # а не на команду: счётчики перестают совпадать, и сравнение молча съезжает.
+    # ⚠ `timeout` всё равно нужен: QEMU не умирает от SIGPIPE молча и может
+    # остаться крутиться с закрытой трубой. Проверено — контейнер висел.
+    cmd = (f"cd /src && timeout 60 ./build/qemu-system-risc5 -M oberon{flag} "
            f"-accel tcg,one-insn-per-tb=on "
            f"-bios prog.bin -nographic -monitor none -serial none "
-           f"-d cpu -D /tmp/q.log >/dev/null 2>&1; "
-           f"head -c 3000000 /tmp/q.log > /src/chk.txt")
-    subprocess.run(["docker", "run", "--rm", "-v", f"{QEMU}:/src",
-                    "qemu-build:risc5", cmd], check=True, capture_output=True)
-    text = (QEMU / "chk.txt").read_text(errors="replace")
+           f"-d cpu -D /dev/stdout 2>/dev/null | head -c {(budget + 8) * 400}")
+    out = subprocess.run(["docker", "run", "--rm", "-v", f"{QEMU}:/src",
+                          "qemu-build:risc5", cmd], capture_output=True, text=True)
+    text = out.stdout
+    # 400 байт на команду — с запасом: настоящий размер записи ~310,
+    # и на нехватке проверка честно падает, а не сравнивает не то.
     blocks = text.split("PC   ")
     # ⚠ QEMU печатает состояние ПЕРЕД исполнением блока, а счётчик модели —
     # ПОСЛЕ исполненной команды. Отсюда сдвиг на единицу: blocks[0] — обрывок
@@ -92,6 +103,17 @@ def main():
     done = rtl["regs"][5]
     print(f"  ✅ CHK: 16 регистров сошлись после {BUDGET} команд "
           f"(сделано итераций: {1000000 - done})")
+
+    # Отрицательный контроль. Проверка, которая не умеет краснеть, ничего не
+    # проверяет: гоняем ту же программу на машине БЕЗ расширения — там эта
+    # кодировка означает другое, и состояния обязаны разойтись.
+    plain = in_qemu(binp, BUDGET, chk=False)
+    if plain == [rtl["regs"][i] for i in range(16)]:
+        print("  ❌ без расширения состояние то же — значит сверка ничего не проверяет")
+        return 1
+    diff = [i for i in range(16) if plain[i] != rtl["regs"][i]]
+    print(f"  ✅ без расширения расходится {', '.join('R%d' % i for i in diff)} — "
+          f"сверка умеет краснеть")
     return 0
 
 
