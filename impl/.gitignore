@@ -8,8 +8,10 @@ ext/norebo/norebo.bin
 ext/norebo/norebo.orig.bin
 ext/refemu/refboot
 ext/refemu/reftrace
-web/risc5.js
-web/risc5.wasm
-web/oberon.dsk
 web/oberon.dsk.gz
-web/prom_sd.mem
+
+# ⚠ risc5.js, risc5.wasm, oberon.dsk и prom_sd.mem НЕ игнорируются: GitHub Pages
+# раздаёт статику как есть, а собрать wasm на раскладке нечем — нужны verilator и
+# emsdk. Пересобираются целью `web`, изменения видны в diff'е. Раньше они
+# игнорировались здесь и жили руками скопированными в site/oberon/ — копия
+# устарела молча.

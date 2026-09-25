@@ -9,7 +9,7 @@
 * `impl/rtl/` — описание процессора RISC5 и периферии
 * `impl/ext/oberon-src/`, `impl/ext/po2013-src/` — исходники системы
 * `impl/ext/disk/Oberon-2016-08-02.dsk` — образ системы
-* `site/oberon/oberon.dsk` — тот же образ для браузера
+* `impl/web/oberon.dsk` — тот же образ для браузера
 
 Источник: [projectoberon.net](http://www.projectoberon.net/).
 Текст уведомления: `impl/ext/norebo/license.txt`.
