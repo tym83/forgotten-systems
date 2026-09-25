@@ -26,6 +26,10 @@ jobs:
         with:
           node-version: '22'
 
+      # Единственная внешняя зависимость сборки методички.
+      - name: markdown
+        run: pip install --quiet 'markdown==3.10.2'
+
       # Методичка: проверяются ссылки между главами и ссылки на лабораторные.
       - name: Методичка
         run: python3 tools/mkbook.py
