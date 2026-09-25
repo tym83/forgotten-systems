@@ -34,6 +34,14 @@ spec:
       labels: {{- include "oberon-vm.labels" . | nindent 8 }}
     spec:
       restartPolicy: OnFailure
+      # ⚠ Образ работает от непривилегированного пользователя, а том приходит
+      # принадлежащим root — записать в него нечего. fsGroup отдаёт том группе
+      # контейнера, и это единственный способ: менять пользователя нельзя,
+      # ограничения тенанта root не пустят.
+      securityContext:
+        fsGroup: 10001
+        runAsUser: 10001
+        runAsGroup: 10001
       containers:
       - name: fill
         image: {{ .Values.emulatorImage }}
