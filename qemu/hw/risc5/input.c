@@ -138,8 +138,17 @@ static void oberon_mouse_event(DeviceState *dev, QemuConsole *src,
             else if (s->mod_alt)  { bit = 2; }
             else if (s->mod_ctrl) { bit = 1; }
             else                  { bit = 4; }
+            /* Аккордом воспользовались — подсказку на экране можно убирать. */
+            if (bit != 4 && s->chord_used) {
+                *s->chord_used = true;
+            }
             break;
-        case INPUT_BUTTON_MIDDLE: bit = 2; break;
+        case INPUT_BUTTON_MIDDLE:
+            if (s->chord_used) {
+                *s->chord_used = true;   /* настоящая средняя — тем более */
+            }
+            bit = 2;
+            break;
         case INPUT_BUTTON_RIGHT:  bit = 1; break;
         default: return;
         }

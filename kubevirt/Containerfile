@@ -63,7 +63,7 @@ RUN /src/qemu-target/graft.sh /src/qemu \
  && ./configure --target-list=risc5-softmmu --disable-docs --disable-tools \
       --disable-guest-agent --without-default-features \
       --python=/usr/bin/python3.12 \
-      --enable-vnc --enable-png \
+      --enable-vnc --enable-pixman --enable-png \
  && ninja -C build qemu-system-risc5
 
 # ── Готовый образ ──────────────────────────────────────────────────────────

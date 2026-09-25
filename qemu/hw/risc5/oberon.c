@@ -69,7 +69,8 @@ static void oberon_init(MachineState *machine)
      * Экран. Кадровый буфер лежит в обычной памяти, отдельной видеопамяти
      * у машины нет — устройство просто читает её и рисует.
      */
-    oberon_display_init(g_new0(OberonDisplay, 1), ram);
+    OberonDisplay *disp = g_new0(OberonDisplay, 1);
+    oberon_display_init(disp, ram);
 
     /*
      * Порты. Без счётчика миллисекунд система не доходит даже до экрана:
@@ -97,6 +98,7 @@ static void oberon_init(MachineState *machine)
         }
         OberonIOState *io = g_new0(OberonIOState, 1);
         oberon_io_init(io, sys, OBERON_IO_BASE, blk);
+        io->chord_used = &disp->hint_done;
         oberon_input_init(io);
     }
 

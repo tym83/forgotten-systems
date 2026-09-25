@@ -22,6 +22,7 @@
 typedef struct OberonDisplay {
     QemuConsole  *con;
     MemoryRegion *ram;
+    bool          hint_done;   /* аккордом воспользовались — подсказка не нужна */
 } OberonDisplay;
 
 void oberon_display_init(OberonDisplay *d, MemoryRegion *ram);
@@ -53,6 +54,7 @@ typedef struct OberonIOState {
     uint32_t mouse;
     int      mouse_x, mouse_y, mouse_btn;
     bool     mod_ctrl, mod_shift, mod_alt;   /* для аккордов кнопок */
+    bool    *chord_used;                     /* чтобы погасить подсказку */
 
     uint8_t  kbd_fifo[OBERON_KBD_FIFO];
     int      kbd_head, kbd_tail;
