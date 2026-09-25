@@ -15,5 +15,8 @@ risc5_ss.add(files(
   'helper.c',
   'cpu.c'))
 
+# Ответы наблюдателю нужны только в системной сборке.
+risc5_system_ss.add(files('qmp-cmds.c'))
+
 target_arch += {'risc5': risc5_ss}
 target_system_arch += {'risc5': risc5_system_ss}

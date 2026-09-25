@@ -133,10 +133,20 @@ static const QemuInputHandler oberon_mouse_handler = {
 void oberon_input_init(OberonIOState *s)
 {
     s->kbd_head = s->kbd_tail = 0;
-    s->mouse_x = FB_WIDTH / 2;
-    s->mouse_y = FB_HEIGHT / 2;
-    s->mouse_btn = 0;
-    s->mouse = (s->mouse_y & 0xFFF) << 12 | (s->mouse_x & 0xFFF);
+
+    /*
+     * ⚠ Мышь начинается в НУЛЕ, а не в середине экрана. В железе
+     * (MousePM.v:47) координаты держатся нулевыми, пока мышь не ответила:
+     * `x <= ~run ? 10'b0 : done ? x + dx : x`. Система рисует курсор там,
+     * куда указывает регистр, — то есть в левом нижнем углу, пока мышь не
+     * двинули.
+     *
+     * Поставить середину казалось удобнее, но это расхождение с железом:
+     * кадровый буфер переставал совпадать с эталонным побайтово, и нашлось
+     * это именно сверкой, а не разглядыванием.
+     */
+    s->mouse_x = s->mouse_y = s->mouse_btn = 0;
+    s->mouse = 0;
 
     /* Возвращаемые состояния держим: без этого сборка считает их потерей. */
     s->kbd_handler = qemu_input_handler_register((DeviceState *)s,
