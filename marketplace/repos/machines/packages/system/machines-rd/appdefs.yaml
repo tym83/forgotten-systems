@@ -52,3 +52,22 @@ apps:
       tags: [environment, meta, education]
       weight: 10
       keysOrder: [["apiVersion"], ["kind"], ["metadata"], ["metadata", "name"], ["spec", "machine"], ["spec", "manual"], ["spec", "host"], ["spec", "manualHost"]]
+
+  # Машина RISC5 как виртуалка. Отличается от лаборатории принципиально:
+  # там браузер и симуляция схемы, здесь настоящая виртуальная машина
+  # кластера с собственной архитектурой.
+  - component: oberon-vm
+    chartPath: apps/oberon-vm
+    kind: OberonVM
+    plural: oberonvms
+    singular: oberonvm
+    prefix: oberon-vm-
+    dashboard:
+      singular: Oberon VM
+      plural: Oberon VMs
+      category: Forgotten Systems
+      description: Машина Вирта RISC5 как виртуалка — архитектура, подключённая снаружи
+      icon: logos/oberon-vm.svg
+      tags: [machine, kubevirt, architecture, retrocomputing]
+      weight: 20
+      keysOrder: [["apiVersion"], ["kind"], ["metadata"], ["metadata", "name"], ["spec", "memory"], ["spec", "running"], ["spec", "emulatorImage"], ["spec", "storageClass"], ["spec", "storage"]]

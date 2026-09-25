@@ -1,0 +1,36 @@
+##
+## @section Машина
+##
+
+## @param {string} memory=128Mi - Сколько памяти отдать машине.
+## Самой машине Вирта хватает шестнадцати мегабайт: больше её адресная шина
+## не видит. Остальное уходит на обвязку KubeVirt.
+memory: 128Mi
+
+## @param {boolean} running=true - Держать машину запущенной.
+running: true
+
+##
+## @section Что запускать
+##
+
+## @param {string} emulatorImage - Образ с эмулятором и ПЗУ.
+## Он же несёт систему Оберон: машине неоткуда её взять иначе.
+emulatorImage: ghcr.io/tym83/paleocomputing/oberon-run:v0.1.4
+
+## @param {string} prom=/payload/prom.bin - Путь к ПЗУ внутри тома.
+prom: /payload/prom.bin
+
+## @param {string} disk=/payload/oberon.dsk - Путь к образу системы.
+disk: /payload/oberon.dsk
+
+##
+## @section Хранилище
+##
+
+## @param {string} storageClass=replicated - Класс тома под ПЗУ и образ.
+storageClass: replicated
+
+## @param {string} storage=1Gi - Размер тома.
+## Система Оберон занимает меньше мегабайта: запас здесь чисто символический.
+storage: 1Gi
