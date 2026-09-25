@@ -35,6 +35,8 @@ spec:
           path: apps/handbook
         - name: workbench
           path: apps/workbench
+        - name: oberon-vm
+          path: apps/oberon-vm
 
         # А вот описания приложений для каталога ставятся один раз.
         - name: machines-rd

@@ -357,6 +357,34 @@ def check_nginx_workers() -> None:
            "наш образ раздачи тоже прибивает число воркеров")
 
 
+
+def check_components_declared_twice():
+    """Каждое приложение объявляется В ДВУХ местах, и забыть одно легко.
+
+    `appdefs.yaml` говорит, что показать в каталоге. `sources/*.yaml` говорит,
+    что выложить артефактом. Приложение, объявленное только в первом, видно в
+    каталоге и ставится — а разворачиваться ему не из чего:
+
+        could not get Source object: ExternalArtifact ... not found
+
+    Поймано ровно так: `oberon-vm` появился в каталоге тенанта и не поднялся.
+    """
+    for repo in sorted(ROOT.glob("repos/*")):
+        src = next(iter((repo / "packages/sources").glob("*.yaml")), None)
+        rds = list((repo / "packages/system").glob("*-rd/appdefs.yaml"))
+        if not src or not rds:
+            continue
+        declared = set()
+        for v in yaml.safe_load(src.read_text(encoding="utf-8"))["spec"]["variants"]:
+            declared |= {c["name"] for c in v.get("components", [])}
+        for rd in rds:
+            spec = yaml.safe_load(rd.read_text(encoding="utf-8"))
+            for app in spec["apps"]:
+                name = app["component"]
+                report(name in declared,
+                       f"{repo.name}: {name} объявлен и в каталоге, и в источнике")
+
+
 def main() -> None:
     print("Проверки каталога «Забытые системы»")
     check_index()
@@ -368,6 +396,7 @@ def main() -> None:
     check_langpack()
     check_schema_roots()
     check_nginx_workers()
+    check_components_declared_twice()
     print(f"\nИтог: успешно {ok_count}, провалено {fail_count}")
     sys.exit(1 if fail_count else 0)
 
