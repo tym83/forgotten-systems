@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Оберон и машина RISC5 — Палеокомпьютинг</title>
-<meta name="description" content="Целый компьютер в шести тысячах строк: процессор, компилятор, операционная система и окна. Загружается в браузере на настоящем описании схемы. Девять лабораторных и методичка.">
+<title>Oberon and the RISC5 machine — Paleocomputing</title>
+<meta name="description" content="A whole computer in six thousand lines: processor, compiler, operating system and windows. It boots in a browser on the real description of the circuit. Nine labs and a handbook.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
@@ -14,149 +14,149 @@
 <div class="sheet">
 
   <header class="masthead">
-    <p class="eyebrow"><a href="../">← Палеокомпьютинг</a></p>
-    <h1>Оберон и машина RISC5</h1>
+    <p class="eyebrow"><a href="../">← Paleocomputing</a> · <a href="../ru/oberon/">Русский</a></p>
+    <h1>Oberon and the RISC5 machine</h1>
     <p class="standfirst">
-      Целый компьютер — от логического вентиля до окна на экране — который
-      помещается в одну голову. Здесь он загружается прямо в браузере, на
-      настоящем описании схемы, написанном Никлаусом Виртом.
+      A whole computer — from the logic gate to the window on screen — that fits
+      in one head. Here it boots right in the browser, on the real description of
+      the circuit, written by Niklaus Wirth.
     </p>
 
     <div class="cta-row">
-      <a class="cta" href="lab.html">Открыть лабораторию <span class="hint">9 заданий</span></a>
-      <a class="cta ghost" href="run.html">Просто запустить систему</a>
-      <a class="cta ghost" href="book/">Методичка</a>
+      <a class="cta" href="lab.html">Open the lab <span class="hint">9 tasks</span></a>
+      <a class="cta ghost" href="run.html">Just run the system</a>
+      <a class="cta ghost" href="book/en/">Handbook</a>
     </div>
 
     <div class="figures">
-      <div class="figure"><b>229</b><span>строк — весь процессор</span></div>
-      <div class="figure"><b>4 953</b><span>строки — ядро, файлы, компилятор, ОС, окна</span></div>
-      <div class="figure"><b>1,2 МБ</b><span>весит всё это в браузере</span></div>
-      <div class="figure"><b>1986</b><span>год системы, которая загрузится</span></div>
+      <div class="figure"><b>229</b><span>lines — the whole processor</span></div>
+      <div class="figure"><b>4,953</b><span>lines — kernel, files, compiler, OS, windows</span></div>
+      <div class="figure"><b>1.2 MB</b><span>is what all of it weighs in a browser</span></div>
+      <div class="figure"><b>1986</b><span>the year of the system that will boot</span></div>
     </div>
   </header>
 
   <section>
-    <h2>Что это такое</h2>
+    <h2>What this is</h2>
     <p>
-      В 1980-х Никлаус Вирт сделал вещь, которую с тех пор никто не повторил: не
-      язык, не операционную систему и не процессор по отдельности, а
-      <strong>всё сразу — и так, чтобы одному человеку было видно целиком</strong>.
+      In the 1980s Niklaus Wirth did something nobody has repeated since: not a
+      language, not an operating system and not a processor separately, but
+      <strong>all of it at once — and so that one person could see the whole</strong>.
     </p>
     <p>
-      Процессор описан на 229 строках. Со всей обвязкой — видео, мышь,
-      клавиатура, порты, дробная арифметика — 1&nbsp;205. Система поверх него,
-      вместе с собственным компилятором и оконным интерфейсом, — ещё 4&nbsp;953.
-      Около шести тысяч строк от вентиля до окна. Это читается за неделю.
+      The processor is described in 229 lines. With all its periphery — video,
+      mouse, keyboard, ports, floating point — 1,205. The system on top of it,
+      together with its own compiler and window interface, is another 4,953.
+      About six thousand lines from gate to window. That is a week's reading.
     </p>
     <p>
-      В современной операционной системе десятки миллионов строк, и целиком её
-      не держит в голове никто — ни один человек в мире не отвечает за всю
-      цепочку. Оберон — редкое место, где можно проверить утверждение о
-      компьютерах насквозь, не упираясь ни в одно «здесь работает магия».
+      A modern operating system has tens of millions of lines, and nobody holds
+      it whole in their head — not one person in the world answers for the entire
+      chain. Oberon is a rare place where a claim about computers can be checked
+      all the way through, without running into a single "magic happens here".
     </p>
     <div class="note">
-      <strong>Это не эмулятор.</strong> В браузере работает симуляция самой
-      схемы: состояние каждого проводника на каждом такте. Что она покажет — то
-      и сделал бы настоящий чип. Поэтому числа, которые тут получаются, можно
-      предъявлять.
+      <strong>This is not an emulator.</strong> What runs in the browser is a
+      simulation of the circuit itself: the state of every wire on every clock.
+      What it shows is what a real chip would have done. That is why the numbers
+      it produces can be put forward.
     </div>
   </section>
 
   <section>
-    <h2>Что можно попробовать прямо сейчас</h2>
+    <h2>What you can try right now</h2>
     <p>
-      Ставить не нужно ничего: <a href="lab.html">лаборатория</a> открывается в
-      браузере, каждое задание проверяется само.
+      Nothing to install: the <a href="lab.html">lab</a> opens in a browser and
+      every task checks itself.
     </p>
     <ol class="steps">
-      <li><h3>Система на настоящем железе</h3><p>Убедиться, что под этим окном действительно схема, а не имитация.</p></li>
-      <li><h3>Защиты памяти здесь нет</h3><p>Посмотреть, что бывает, когда её нет, — и почему систему это не убивает.</p></li>
-      <li><h3>Система пересобирает сама себя</h3><p>Запустить пересборку и дождаться, пока она соберёт собственный компилятор.</p></li>
-      <li><h3>Сколько тактов на инструкцию</h3><p>Померить и сверить с тем, что обещает схема.</p></li>
-      <li><h3>Куча кончается внутри команды</h3><p>Довести систему до нехватки памяти ровно посреди работы и увидеть, что будет.</p></li>
-      <li><h3>Неподвижная точка: два поколения</h3><p>Собрать компилятор компилятором, потом ещё раз — и сравнить результаты побайтово.</p></li>
-      <li><h3>Первый свой модуль</h3><p>Написать программу на Обероне, скомпилировать её внутри системы и запустить.</p></li>
-      <li><h3>Ключ интерфейса</h3><p>Сломать совместимость между модулями и посмотреть, как система это ловит.</p></li>
-      <li><h3>Внутри кодогенератора</h3><p>Залезть в то место компилятора, где команды процессора наконец появляются.</p></li>
+      <li><h3>The system on real hardware</h3><p>Convince yourself there is a circuit under that window, not an imitation.</p></li>
+      <li><h3>There is no memory protection here</h3><p>See what happens when there is none — and why it does not kill the system.</p></li>
+      <li><h3>The system rebuilds itself</h3><p>Run the rebuild and wait while it builds its own compiler.</p></li>
+      <li><h3>Cycles per instruction</h3><p>Measure it and check against what the circuit promises.</p></li>
+      <li><h3>The heap runs out mid-command</h3><p>Drive the system out of memory in the middle of work and watch what follows.</p></li>
+      <li><h3>Fixed point: two generations</h3><p>Build the compiler with the compiler, then again — and compare the results byte for byte.</p></li>
+      <li><h3>Your first module</h3><p>Write a program in Oberon, compile it inside the system and run it.</p></li>
+      <li><h3>The interface key</h3><p>Break compatibility between modules and watch the system catch it.</p></li>
+      <li><h3>Inside the code generator</h3><p>Reach the place in the compiler where processor instructions finally appear.</p></li>
     </ol>
   </section>
 
   <section>
-    <h2>Методичка</h2>
+    <h2>The handbook</h2>
     <p>
-      Восемь глав — от «зачем это» до «что мы измерили». Лабораторные ссылаются
-      на них по ходу дела, но читать можно и отдельно.
+      Eight chapters, from "why this" to "what we measured". The labs refer to
+      them as they go, but they can be read on their own.
     </p>
     <ul class="chapters">
-      <li><a href="book/01-zachem.html">1. Зачем это и что здесь настоящее</a></li>
-      <li><a href="book/02-mashina.html">2. Машина: RISC5</a></li>
-      <li><a href="book/03-yazyk.html">3. Язык: Оберон за одну главу</a></li>
-      <li><a href="book/04-sistema.html">4. Система: текст вместо кнопок</a></li>
-      <li><a href="book/05-moduli.html">5. Модули, символьные файлы и ключи</a></li>
-      <li><a href="book/06-kompilyator.html">6. Компилятор изнутри</a></li>
-      <li><a href="book/07-samoraskrutka.html">7. Самораскрутка и неподвижная точка</a></li>
-      <li><a href="book/08-izmereno.html">8. Что мы измерили и что нашли</a></li>
+      <li><a href="book/en/01-zachem.html">1. What this is for, and what here is real</a></li>
+      <li><a href="book/en/02-mashina.html">2. The machine: RISC5</a></li>
+      <li><a href="book/en/03-yazyk.html">3. The language: Oberon in one chapter</a></li>
+      <li><a href="book/en/04-sistema.html">4. The system: text instead of buttons</a></li>
+      <li><a href="book/en/05-moduli.html">5. Modules, symbol files and keys</a></li>
+      <li><a href="book/en/06-kompilyator.html">6. The compiler from inside</a></li>
+      <li><a href="book/en/07-samoraskrutka.html">7. Self-hosting and the fixed point</a></li>
+      <li><a href="book/en/08-izmereno.html">8. What we measured and what we found</a></li>
     </ul>
   </section>
 
   <section>
-    <h2>Если хочется проверить нас самим</h2>
+    <h2>If you would rather check us yourself</h2>
     <p>
-      Всё, что мы утверждаем, воспроизводится одной командой. Нужен Verilator и
-      компилятор C++:
+      Everything we claim reproduces with one command. Verilator and a C++
+      compiler are needed:
     </p>
     <pre><code>git clone https://github.com/tym83/paleocomputing
 cd paleocomputing/impl
-make deps     # проверить окружение
-make check    # около восьми минут</code></pre>
+make deps     # check the environment
+make check    # about eight minutes</code></pre>
     <p>
-      За эти восемь минут прогоняются тесты набора команд, загружается система,
-      идёт пошаговая сверка с эталонной моделью на 14,6&nbsp;млн инструкций,
-      компилятор собирает сам себя, и система пересобирает себя целиком —
-      37 файлов побайтово.
+      In those eight minutes the instruction-set tests run, the system boots, a
+      step-by-step comparison against a reference model covers 14.6 million
+      instructions, the compiler builds itself, and the system rebuilds itself
+      entire — 37 files byte for byte.
     </p>
     <p>
-      Две лабораторные в браузер не помещаются: они требуют пересборки схемы и
-      компилятора. Для них есть контейнер — даёшь правку, получаешь вердикт, ни
-      гита, ни сети внутри не нужно.
+      Two labs do not fit in a browser: they need the circuit and the compiler
+      rebuilt. There is a container for those — you give it a change and get a
+      verdict, with neither git nor network needed inside.
     </p>
   </section>
 
   <section>
-    <h2>Что здесь чьё</h2>
+    <h2>Whose is what here</h2>
     <p>
-      <strong>Взято готовым:</strong> ядро RISC5 и периферия — Никлаус Вирт,
-      <a href="http://www.projectoberon.net/">projectoberon.net</a>; образ системы
-      Project Oberon; компилятор с командной строки и эталонный эмулятор —
+      <strong>Taken ready:</strong> the RISC5 core and its periphery — Niklaus Wirth,
+      <a href="http://www.projectoberon.net/">projectoberon.net</a>; the Project
+      Oberon system image; the command-line compiler and the reference emulator —
       <a href="https://github.com/pdewacht/project-norebo">pdewacht</a>.
     </p>
     <p>
-      <strong>Наше:</strong> стенды и измерительная оснастка, ассемблер RISC5,
-      наборы тестов, браузерная сборка, лабораторные и методичка. Плюс 53 строки
-      правки в описании процессора — добавленная команда проверки границ, ради
-      которой и затевалось измерение.
+      <strong>Ours:</strong> the benches and the measuring instrumentation, a RISC5
+      assembler, the test sets, the browser build, the labs and the handbook.
+      Plus 53 lines of change in the processor's description — the added bounds
+      check instruction, for the sake of which the measurement was undertaken.
     </p>
   </section>
 
   <section>
-    <h2>Чего эти числа не означают</h2>
+    <h2>What these numbers do not mean</h2>
     <p>
-      Мы измерили, сколько стоит проверка границ массива: 2,2&nbsp;% времени.
-      Важно, чего это <em>не</em> значит.
+      We measured what an array bounds check costs: 2.2% of the time. It matters
+      what that does <em>not</em> mean.
     </p>
     <ol class="steps">
-      <li><p><strong>Это Оберон, а не «вообще».</strong> Цифра относится к этой машине и этой работе. Переносится метод и вывод о разбросе, а не сами числа.</p></li>
-      <li><p><strong>У этого процессора нет ни кэша, ни предсказателя переходов.</strong> Ошибка идёт в две стороны: современная машина за такую проверку почти не платит, зато разросшийся код у неё может не влезть в кэш.</p></li>
-      <li><p><strong>На живой плате не запускали.</strong> Синтез прогнан, но задержки проводов в расчёте отключены — это наша же находка, она записана.</p></li>
-      <li><p><strong>Это не разоблачение Вирта.</strong> Расхождения, которые мы нашли, — в поставке и вспомогательных инструментах, и часть объясняется историей версий.</p></li>
+      <li><p><strong>This is Oberon, not "in general".</strong> The figure belongs to this machine and this work. What travels is the method and the conclusion about spread, not the numbers.</p></li>
+      <li><p><strong>This processor has no cache and no branch prediction.</strong> The error runs both ways: a modern machine pays almost nothing for such a check, but the code it grows may not fit in cache.</p></li>
+      <li><p><strong>It was not run on a live board.</strong> Synthesis was done, but wire delays are excluded from the estimate — that is our own finding, and it is recorded.</p></li>
+      <li><p><strong>This is no exposé of Wirth.</strong> The inconsistencies we found are in the distribution and the auxiliary tools, and some are explained by the history of versions.</p></li>
     </ol>
   </section>
 
   <footer>
-    Измерения, оговорки и 34 находки — в
+    Measurements, caveats and 50 findings —
     <a href="https://github.com/tym83/paleocomputing/tree/main/impl/docs">impl/docs</a><br>
-    Оберон и RISC5 — Никлаус Вирт. Наша часть — Apache-2.0.
+    Oberon and RISC5 — Niklaus Wirth. Our part is Apache-2.0.
   </footer>
 
 </div>
