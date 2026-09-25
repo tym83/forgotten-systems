@@ -48,6 +48,7 @@ RUN dnf install -y --setopt=install_weak_deps=False dnf-plugins-core \
       git meson ninja-build gcc make \
       python3.12 python3.12-devel \
       glib2-devel pixman-devel zlib-devel flex bison \
+      libpng-devel libjpeg-turbo-devel \
  && dnf clean all
 
 # ⚠ Свежему QEMU нужен Python 3.12, а базовый в CentOS 9 — 3.9. Ставим рядом
@@ -62,6 +63,7 @@ RUN /src/qemu-target/graft.sh /src/qemu \
  && ./configure --target-list=risc5-softmmu --disable-docs --disable-tools \
       --disable-guest-agent --without-default-features \
       --python=/usr/bin/python3.12 \
+      --enable-vnc --enable-png \
  && ninja -C build qemu-system-risc5
 
 # ── Готовый образ ──────────────────────────────────────────────────────────

@@ -38,6 +38,10 @@ jobs:
             file: deploy/Containerfile.web
           - name: oberon-lab
             file: deploy/Containerfile
+          # Среда языка: компилятор Вирта без операционной системы. Это то,
+          # что берёт langpack для разовых прогонов и постоянной службы.
+          - name: oberon-run
+            file: deploy/Containerfile.oberon-run
     steps:
       - uses: actions/checkout@v4
 

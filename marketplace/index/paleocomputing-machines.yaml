@@ -4,7 +4,7 @@
 # cozypkg search ищет по имени, описанию и тегам.
 name: paleocomputing-machines
 ociRef: oci://ghcr.io/tym83/paleocomputing/machines
-version: v0.1.3
+version: v0.1.4
 description: Машины, которых нет в основном каталоге — эмуляторы, лабораторные и методички к ним
 homepage: https://github.com/tym83/paleocomputing
 maintainer: tym83

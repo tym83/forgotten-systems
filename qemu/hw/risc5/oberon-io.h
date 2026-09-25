@@ -52,6 +52,7 @@ typedef struct OberonIOState {
     uint32_t spi_tx, spi_rx, spi_ctrl;
     uint32_t mouse;
     int      mouse_x, mouse_y, mouse_btn;
+    bool     mod_ctrl, mod_shift, mod_alt;   /* для аккордов кнопок */
 
     uint8_t  kbd_fifo[OBERON_KBD_FIFO];
     int      kbd_head, kbd_tail;

@@ -11,6 +11,18 @@
  * Input.Mod. Свою таблицу писать нельзя — она разошлась бы с системой на
  * редких клавишах, и обнаружилось бы это нескоро.
  *
+ * ⚠ Аккорды для кнопок, которых нет на ноутбуке. Оберону нужны все три
+ * кнопки, а средней на трекпаде не бывает вовсе. Клиент VNC три кнопки
+ * передаёт честно, но нажать их не на чем, поэтому подменяем здесь, в машине:
+ * работает с любым клиентом и ничего не требует от него.
+ *
+ *   ⌥ Alt + щелчок   → средняя кнопка (запуск команд)
+ *   Ctrl + щелчок    → правая
+ *   ⇧ Shift + щелчок → ЛЕВАЯ И ПРАВАЯ СРАЗУ — межкнопочный щелчок, которым
+ *                      в Обероне делается второй угол прямоугольника. Без
+ *                      него Rectangles.Make не работает: ему нужны две метки,
+ *                      и вторая ставится, не отпуская первой.
+ *
  * Мышь отдаётся одним словом (MousePM.v:36):
  *   out = {run, btns, 2'b0, y, 2'b0, x}
  * то есть x в битах 9:0, y в 21:12, кнопки в 26:24. Начало координат внизу
@@ -25,6 +37,14 @@
 
 #define FB_WIDTH  1024
 #define FB_HEIGHT  768
+
+/* Коды клавиш linux — те же, что приходят в evt->key.key. */
+#define LNX_LEFTCTRL   29
+#define LNX_LEFTSHIFT  42
+#define LNX_LEFTALT    56
+#define LNX_RIGHTCTRL  97
+#define LNX_RIGHTALT   100
+#define LNX_RIGHTSHIFT 54
 
 static void kbd_push(OberonIOState *s, uint8_t code)
 {
@@ -50,6 +70,17 @@ static void oberon_key_event(DeviceState *dev, QemuConsole *src,
     if (evt->key.key >= qemu_input_map_linux_to_atset2_len) {
         return;
     }
+    /* Запоминаем управляющие клавиши: по ним подменяются кнопки мыши. */
+    switch (evt->key.key) {
+    case LNX_LEFTCTRL:  case LNX_RIGHTCTRL:
+        s->mod_ctrl  = evt->key.down; break;
+    case LNX_LEFTSHIFT: case LNX_RIGHTSHIFT:
+        s->mod_shift = evt->key.down; break;
+    case LNX_LEFTALT:   case LNX_RIGHTALT:
+        s->mod_alt   = evt->key.down; break;
+    default: break;
+    }
+
     set2 = qemu_input_map_linux_to_atset2[evt->key.key];
     if (set2 == 0) {
         return;
@@ -97,7 +128,17 @@ static void oberon_mouse_event(DeviceState *dev, QemuConsole *src,
          * набор, а не последнее событие.
          */
         switch (evt->btn.button) {
-        case INPUT_BUTTON_LEFT:   bit = 4; break;
+        case INPUT_BUTTON_LEFT:
+            /*
+             * Левая кнопка с управляющей клавишей означает другую. Аккорды
+             * проверяются по убыванию сложности: Shift даёт СРАЗУ ДВЕ, и
+             * именно это в Обероне называется межкнопочным щелчком.
+             */
+            if (s->mod_shift)     { bit = 4 | 1; }
+            else if (s->mod_alt)  { bit = 2; }
+            else if (s->mod_ctrl) { bit = 1; }
+            else                  { bit = 4; }
+            break;
         case INPUT_BUTTON_MIDDLE: bit = 2; break;
         case INPUT_BUTTON_RIGHT:  bit = 1; break;
         default: return;
