@@ -1,0 +1,49 @@
+# Сгенерировано tools/gen-appdefs.py из appdefs.yaml и
+# apps/oberon-vm/values.schema.json. Руками не править:
+# `make gen` перезапишет, `make check` поймает расхождение.
+apiVersion: cozystack.io/v1alpha1
+kind: ApplicationDefinition
+metadata:
+  name: oberon-vm
+spec:
+  application:
+    kind: OberonVM
+    plural: oberonvms
+    singular: oberonvm
+    openAPISchema: '{"$schema":"http://json-schema.org/draft-07/schema#","title":"oberon-vm","type":"object","$comment":"Корень схемы НЕ закрыт намеренно: cozystack-engine подмешивает в values любого приложения тенанта свои ключи (_cluster, _namespace), и при additionalProperties:false Helm отвергает значения целиком — приложение не разворачивается. Ни один чарт платформы корень не закрывает. Вложенные объекты закрыты: туда движок ничего не кладёт.","required":["memory","emulatorImage","storageClass","storage"],"properties":{"memory":{"type":"string","minLength":1,"default":"128Mi"},"running":{"type":"boolean","default":true},"emulatorImage":{"type":"string","minLength":1,"default":"ghcr.io/tym83/paleocomputing/oberon-run:v0.1.4"},"prom":{"type":"string","pattern":"^/.*","default":"/payload/prom.bin"},"disk":{"type":"string","pattern":"^/.*","default":"/payload/oberon.dsk"},"storageClass":{"type":"string","minLength":1,"default":"replicated"},"storage":{"type":"string","minLength":1,"default":"1Gi"}}}'
+  release:
+    prefix: oberon-vm-
+    labels:
+      sharding.fluxcd.io/key: tenants
+    chartRef:
+      kind: ExternalArtifact
+      name: paleocomputing-machines-default-oberon-vm
+      namespace: cozy-system
+  dashboard:
+    singular: Oberon VM
+    plural: Oberon VMs
+    category: Forgotten Systems
+    description: Машина Вирта RISC5 как виртуалка — архитектура, подключённая снаружи
+    tags:
+    - machine
+    - kubevirt
+    - architecture
+    - retrocomputing
+    weight: 20
+    keysOrder:
+    - - apiVersion
+    - - kind
+    - - metadata
+    - - metadata
+      - name
+    - - spec
+      - memory
+    - - spec
+      - running
+    - - spec
+      - emulatorImage
+    - - spec
+      - storageClass
+    - - spec
+      - storage
+    icon: PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij4KICA8cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHJ4PSI4IiBmaWxsPSIjMWExYTFhIi8+CiAgPHJlY3QgeD0iMTAiIHk9IjEyIiB3aWR0aD0iNDQiIGhlaWdodD0iOCIgZmlsbD0iI2U2ZTZlNiIvPgogIDxyZWN0IHg9IjEwIiB5PSIyNCIgd2lkdGg9IjI2IiBoZWlnaHQ9IjMiIGZpbGw9IiM4YThhOGEiLz4KICA8cmVjdCB4PSIxMCIgeT0iMzEiIHdpZHRoPSIzNCIgaGVpZ2h0PSIzIiBmaWxsPSIjOGE4YThhIi8+CiAgPHJlY3QgeD0iMTAiIHk9IjM4IiB3aWR0aD0iMjAiIGhlaWdodD0iMyIgZmlsbD0iIzhhOGE4YSIvPgogIDxyZWN0IHg9IjEwIiB5PSI0NSIgd2lkdGg9IjMwIiBoZWlnaHQ9IjMiIGZpbGw9IiM4YThhOGEiLz4KICA8cmVjdCB4PSI0NCIgeT0iNDQiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0iI2U2ZTZlNiIvPgo8L3N2Zz4K

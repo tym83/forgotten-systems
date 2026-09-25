@@ -79,25 +79,28 @@
 </style>
 
 <header>
-  <h1>Лаборатории · Оберон на настоящем Verilog</h1>
+  <h1 data-i18n-en="Labs · Oberon on real Verilog">Лаборатории · Оберон на настоящем Verilog</h1>
   <select id="pick"></select>
-  <a href="book/index.html" style="color:var(--acc)">Методичка</a>
-  <button id="reset">Откатить</button>
-  <button id="pause">Пауза</button>
-  <label class="stat">мышь
+  <a href="book/index.html" style="color:var(--acc)" data-i18n-en="Handbook">Методичка</a>
+  <button id="reset" data-i18n-en="Reset">Откатить</button>
+  <button id="pause" data-i18n-en="Pause">Пауза</button>
+  <label class="stat"><span data-i18n-en="mouse">мышь</span>
     <select id="btn">
-      <option value="4">левая — ставит курсор</option>
-      <option value="2">средняя — запускает</option>
-      <option value="1">правая — выделяет</option>
+      <option value="4" data-i18n-en="left — places the caret">левая — ставит курсор</option>
+      <option value="2" data-i18n-en="middle — runs">средняя — запускает</option>
+      <option value="1" data-i18n-en="right — selects">правая — выделяет</option>
     </select>
   </label>
-  <label class="stat">масштаб
+  <label class="stat"><span data-i18n-en="language">язык</span>
+    <select id="lang"></select>
+  </label>
+  <label class="stat"><span data-i18n-en="zoom">масштаб</span>
     <select id="zoom">
-      <option value="fit">вписать в окно</option>
-      <option value="1">1:1 — резко</option>
+      <option value="fit" data-i18n-en="fit to window">вписать в окно</option>
+      <option value="1" data-i18n-en="1:1 — sharp">1:1 — резко</option>
       <option value="1.25">1,25×</option>
       <option value="1.5">1,5×</option>
-      <option value="2">2× — крупно</option>
+      <option value="2" data-i18n-en="2× — large">2× — крупно</option>
     </select>
   </label>
   <span class="stat" id="stat" title="Сколько команд выполнил процессор; адрес выполняемой сейчас команды; меняется ли картинка">загрузка…</span>
@@ -123,7 +126,7 @@
     <section>
       <ol id="steps"></ol>
     </section>
-    <section class="payoff-box"><h2 class="payoff-h">В чём тут дело</h2>
+    <section class="payoff-box"><h2 class="payoff-h" data-i18n-en="What this is about">В чём тут дело</h2>
       <div id="payoff"></div></section>
     <section><div class="hint" id="hint"></div></section>
   </div>
@@ -131,10 +134,26 @@
 
 <script type="module">
 import { Machine, attach, labelAltKeys, ALT_LABEL } from './machine.js';
+import { LANG, LANGS, setLang, applyMarkup } from './i18n.js';
 import { LABS } from './labs.js';
 
 const $ = id => document.getElementById(id);
 const hex = n => (n >>> 0).toString(16).toUpperCase();
+
+// Язык: английский по умолчанию, русский по выбору. Выбор запоминается,
+// а `?lang=ru` в адресе перебивает запомненное.
+applyMarkup(document);
+LANGS_FILL();
+function LANGS_FILL() {
+  const sel = $('lang');
+  if (!sel) return;
+  for (const [code, name] of Object.entries(LANGS)) {
+    const o = document.createElement('option');
+    o.value = code; o.textContent = name; o.selected = (code === LANG);
+    sel.append(o);
+  }
+  sel.onchange = e => setLang(e.target.value);
+}
 
 const prom = new Uint32Array((await (await fetch('prom_sd.mem')).text())
   .trim().split('\n').map(l => parseInt(l, 16)));
@@ -154,7 +173,7 @@ function render() {
   $('title').textContent = lab.title;
   $('level').textContent = '· ' + lab.level;
   $('intro').innerHTML = lab.intro;
-  $('hint').innerHTML = '<b>Подсказка.</b> ' + lab.hint;
+  $('hint').innerHTML = (LANG === 'ru' ? '<b>Подсказка.</b> ' : '<b>Hint.</b> ') + lab.hint;
   $('payoff').innerHTML = lab.payoff || '';
   document.querySelector('.payoff-box').hidden = !lab.payoff;
   $('toolbox').hidden = lab.tools !== 'poke';
@@ -168,7 +187,7 @@ function render() {
     const li = document.createElement('li');
     li.innerHTML = st.text;
     const b = document.createElement('button');
-    b.textContent = 'Проверить';
+    b.textContent = LANG === 'ru' ? 'Проверить' : 'Check';
     const res = document.createElement('div');
     res.className = 'res';
     let inp = null;
@@ -232,7 +251,9 @@ setInterval(() => {
   // из неё то единственное, что важно: рисует машина или замерла.
   const crc = m.fbCrc(), drawing = crc !== lastCrc; lastCrc = crc;
   $('stat').textContent =
-    `${(m.insns / 1e6).toFixed(1)} млн команд · адрес ${hex(m.pc)} · экран ${drawing ? 'меняется' : 'замер'}`;
+    (LANG === 'ru'
+      ? `${(m.insns / 1e6).toFixed(1)} млн команд · адрес ${hex(m.pc)} · экран ${drawing ? 'меняется' : 'замер'}`
+      : `${(m.insns / 1e6).toFixed(1)}M instructions · at ${hex(m.pc)} · screen ${drawing ? 'changing' : 'still'}`);
   $('pc').textContent = hex(m.pc);
 }, 250);
 </script>

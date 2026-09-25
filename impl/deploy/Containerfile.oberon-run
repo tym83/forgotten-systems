@@ -12,6 +12,19 @@ WORKDIR /src
 COPY ext/norebo/ ./norebo/
 RUN cc -O2 -o /norebo norebo/Runtime/norebo.c norebo/Runtime/risc-cpu.c
 
+# ПЗУ в двоичном виде: в исходниках оно шестнадцатеричным текстом, а QEMU
+# ждёт байты. Переводим при сборке, чтобы не держать в репозитории две копии.
+FROM docker.io/library/python:3.12-slim AS payload
+WORKDIR /p
+# ⚠ Берём ИСТОЧНИКИ, а не web/: там лежат продукты сборки, и в .gitignore.
+# Локально они есть, в сборке — нет, и COPY молча копирует пустоту. Ровно на
+# этом образ раздачи однажды вышел без машины.
+COPY rtl/prom_sd.mem ./
+COPY ext/disk/Oberon-2016-08-02.dsk ./oberon.dsk
+RUN python3 -c "import struct; \
+  ws=[int(x,16) for x in open('prom_sd.mem').read().split()]; \
+  open('prom.bin','wb').write(b''.join(struct.pack('<I',w) for w in ws))"
+
 FROM docker.io/library/debian:bookworm-slim
 RUN useradd -u 10001 -m oberon
 COPY --from=build /norebo /usr/local/bin/norebo
@@ -19,6 +32,10 @@ COPY --from=build /norebo /usr/local/bin/norebo
 COPY ext/norebo/Norebo/  /opt/oberon/Norebo/
 COPY ext/norebo/Oberon/  /opt/oberon/Oberon/
 COPY ext/norebo/build2/  /opt/oberon/build2/
+# Система Оберон и её ПЗУ: отсюда их забирает приложение машины RISC5,
+# наполняя том. Здесь же они нужны и сами по себе — образ несёт язык вместе
+# с системой, на которой он вырос.
+COPY --from=payload /p/prom.bin /p/oberon.dsk /opt/oberon/payload/
 COPY deploy/oberon-run.sh /usr/local/bin/oberon-run
 RUN chmod +x /usr/local/bin/oberon-run
 USER 10001

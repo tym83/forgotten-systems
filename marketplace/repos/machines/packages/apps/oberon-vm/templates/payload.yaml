@@ -1,0 +1,52 @@
+{{/*
+  Том с ПЗУ и образом системы.
+
+  Машине неоткуда взять ни то, ни другое: у неё нет ни микропрограммы в
+  привычном смысле, ни сети. Том наполняется разовой задачей из образа с
+  эмулятором и монтируется И в перехватчик, И в контейнер с libvirt — за это
+  отвечает sharedComputePath в объявлении перехватчика.
+*/}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "oberon-vm.fullname" . }}-payload
+  labels: {{- include "oberon-vm.labels" . | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: {{ .Values.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.storage }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "oberon-vm.fullname" . }}-fill
+  labels: {{- include "oberon-vm.labels" . | nindent 4 }}
+  annotations:
+    # Задача разовая: наполнила том — и больше не нужна. Но удалять её сразу
+    # нельзя, иначе не посмотреть, почему не получилось.
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels: {{- include "oberon-vm.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: fill
+        image: {{ .Values.emulatorImage }}
+        command: ["sh", "-c"]
+        args:
+          - |
+            set -e
+            cp /opt/oberon/payload/prom.bin /opt/oberon/payload/oberon.dsk /payload/
+            ls -la /payload/
+        volumeMounts:
+        - name: payload
+          mountPath: /payload
+      volumes:
+      - name: payload
+        persistentVolumeClaim:
+          claimName: {{ include "oberon-vm.fullname" . }}-payload

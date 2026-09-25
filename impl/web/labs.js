@@ -5,6 +5,8 @@
 // Здесь первые три; каждая опирается на то, что уже доказано в impl/docs.
 
 import { OberonFS, parseRsc, readText } from './oberonfs.js';
+import { LANG } from './i18n.js';
+import { EN } from './labs.en.js';
 
 
 // Служебная запись файла меняется при каждой перезаписи: Files.Register
@@ -483,4 +485,32 @@ END Idx.</pre>
 
 // Порядок в интерфейсе — по номеру из программы курса, а не по времени
 // написания.
-export const LABS = ALL.sort((a, b) => a.id - b.id);
+/*
+ * Наложение перевода. Русский написан прямо в записях выше; английский лежит
+ * отдельным файлом и подменяет поля по ключу «<номер>.<поле>».
+ *
+ * Чего в наложении нет — остаётся как есть. Это позволяет переводить
+ * постепенно, ничего не ломая: непереведённое просто останется русским, а не
+ * исчезнет.
+ */
+function localise(lab) {
+  if (LANG === 'ru') return lab;
+  const o = EN, id = lab.id;
+  const at = k => o[`${id}.${k}`];
+
+  const out = { ...lab };
+  for (const f of ['title', 'intro', 'hint', 'payoff']) {
+    if (at(f) !== undefined) out[f] = at(f);
+  }
+  if (o[`level.${lab.level}`]) out.level = o[`level.${lab.level}`];
+  if (lab.read) {
+    out.read = lab.read.map(([f, title]) => [f, o[`book.${f}`] ?? title]);
+  }
+  out.steps = lab.steps.map((st, i) => {
+    const tr = at(`step.${i}`);
+    return tr === undefined ? st : { ...st, text: tr };
+  });
+  return out;
+}
+
+export const LABS = ALL.sort((a, b) => a.id - b.id).map(localise);

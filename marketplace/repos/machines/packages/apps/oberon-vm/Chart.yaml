@@ -1,0 +1,7 @@
+apiVersion: v2
+name: oberon-vm
+description: Wirth's RISC5 as a virtual machine — a whole architecture plugged in from outside
+icon: /logos/oberon-vm.svg
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

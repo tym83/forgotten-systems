@@ -6,9 +6,47 @@
 # пользователя 101, то есть под обычными ограничениями кластера ему не нужен
 # ни рут, ни записываемый корень. Конфигурация лежит в образе и НЕ должна
 # перекрываться томом — иначе потеряется тип для wasm.
-FROM nginxinc/nginx-unprivileged:1.29-alpine
+# ⚠ Машина собирается ЗДЕСЬ, а не приносится готовой.
+#
+# risc5.js, risc5.wasm, prom_sd.mem и oberon.dsk — продукты сборки, они в
+# .gitignore. Прежний образ копировал каталог web/ как есть и получался БЕЗ
+# машины: страница отдавалась, а заводить на ней было нечего. В кластере это
+# выглядело как успех — код ответа 200 и верный размер страницы, — и потому
+# держалось незамеченным. Проверка смотрела на форму, а не на поведение.
+# Берём готовый образ с emscripten: ставить его с нуля в чистом дистрибутиве
+# ненадёжно — установщик тянет своё окружение и падает по причинам, к нашей
+# сборке отношения не имеющим.
+FROM docker.io/emscripten/emsdk:3.1.74 AS machine
+# ⚠ Verilator берём СОБСТВЕННОЙ сборки, а не из дистрибутива.
+#
+# Заголовки verilator идут в компиляцию вместе с моделью, и у версии из
+# дистрибутива они под wasm не собираются: verilated_threads.cpp тянет
+# std::thread, которого в этой сборке нет. Версия должна совпадать с той, на
+# которой модель проверена.
+ARG VERILATOR_VERSION=v5.052
+RUN apt-get update -q && apt-get install -y -q --no-install-recommends \
+      make git g++ perl python3 autoconf flex bison ccache \
+      libgoogle-perftools-dev numactl zlib1g-dev help2man libfl-dev \
+ && git clone --depth 1 -b ${VERILATOR_VERSION} https://github.com/verilator/verilator /v \
+ && cd /v && autoconf && ./configure --prefix=/usr/local >/dev/null \
+ && make -j"$(nproc)" >/dev/null && make install >/dev/null \
+ && cd / && rm -rf /v /var/lib/apt/lists/*
+WORKDIR /src
+COPY rtl/ ./rtl/
+COPY tb/ ./tb/
+COPY ext/disk/ ./ext/disk/
+COPY Makefile ./
+# ⚠ Каталог под промежуточные файлы создаём сами: цель verilator его не
+# заводит, и он пишет в несуществующий путь.
+RUN mkdir -p web build/obj_wasm && make web \
+ && ls -la web/risc5.js web/risc5.wasm web/oberon.dsk web/prom_sd.mem
+
+FROM docker.io/nginxinc/nginx-unprivileged:1.29-alpine
 
 COPY --chown=101:101 web/ /usr/share/nginx/html/
+# Машина кладётся поверх: страницы приходят из репозитория, машина из сборки.
+COPY --from=machine --chown=101:101 /src/web/risc5.js /src/web/risc5.wasm \
+     /src/web/prom_sd.mem /src/web/oberon.dsk /usr/share/nginx/html/
 
 # WASM без правильного типа браузер отказывается компилировать потоком.
 #

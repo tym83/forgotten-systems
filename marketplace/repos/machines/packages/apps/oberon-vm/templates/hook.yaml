@@ -1,0 +1,19 @@
+{{/*
+  Перехватчик KubeVirt.
+
+  Описание домена, которое KubeVirt пишет для обычной виртуалки, надо
+  переписать в описание машины Вирта. `OnDefineDomain` — штатная точка
+  расширения, форк не нужен; более того, не нужен и свой образ перехватчика:
+  штатная обёртка исполнит скрипт, поданный отсюда.
+
+  Скрипт лежит рядом с чартом и вставляется как есть — так он один и тот же
+  в репозитории, в проверках и в кластере.
+*/}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "oberon-vm.fullname" . }}-hook
+  labels: {{- include "oberon-vm.labels" . | nindent 4 }}
+data:
+  onDefineDomain: |
+{{ .Files.Get "files/onDefineDomain.py" | indent 4 }}

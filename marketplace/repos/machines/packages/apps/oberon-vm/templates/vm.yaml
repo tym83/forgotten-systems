@@ -1,0 +1,38 @@
+{{/*
+  Сама машина.
+
+  Описание намеренно бедное: почти всё, что здесь задано, перехватчик заменит.
+  KubeVirt требует заполнить поля, чтобы собрать домен, — а мы потом его
+  переписываем. Значения ниже существуют только чтобы эта сборка состоялась.
+
+  ⚠ Требуется признак Sidecar в ресурсе KubeVirt кластера и образ
+  virt-launcher с libvirt, знающим архитектуру risc5. Это настройка уровня
+  кластера, тенанту она не видна — см. README.
+*/}}
+apiVersion: kubevirt.io/v1
+kind: VirtualMachineInstance
+metadata:
+  name: {{ include "oberon-vm.fullname" . }}
+  labels: {{- include "oberon-vm.labels" . | nindent 4 }}
+  annotations:
+    hooks.kubevirt.io/hookSidecars: |
+      [{
+        "args": ["--version", "v1alpha2"],
+        "configMap": {
+          "name": "{{ include "oberon-vm.fullname" . }}-hook",
+          "key": "onDefineDomain",
+          "hookPath": "/usr/bin/onDefineDomain"
+        },
+        "pvc": {
+          "name": "{{ include "oberon-vm.fullname" . }}-payload",
+          "volumePath": "/payload",
+          "sharedComputePath": "/payload"
+        }
+      }]
+spec:
+  domain:
+    resources:
+      requests:
+        memory: {{ .Values.memory }}
+    devices: {}
+  volumes: []
