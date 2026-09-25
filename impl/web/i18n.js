@@ -14,6 +14,10 @@ export const LANGS = { en: 'English', ru: 'Русский' };
 const KEY = 'paleo.lang';
 
 function pick() {
+  // Вне браузера (безголовый прогон лабораторных в node) выбирать нечем и не
+  // из чего: `location` там нет вовсе, и обращение к нему валит весь набор
+  // тестов ещё до первой проверки.
+  if (typeof location === 'undefined') return 'en';
   const q = new URLSearchParams(location.search).get('lang');
   if (q && q in LANGS) return q;
   try {
@@ -44,6 +48,12 @@ export function t(v) {
 
 /** Перевод всех подписей в разметке: <span data-i18n-en="..." data-i18n-ru="..."> */
 export function applyMarkup(root = document) {
+  // Язык документа и заголовок вкладки. На самой странице их не видно, поэтому
+  // они и оставались русскими, когда языком по умолчанию стал английский, —
+  // а видит их закладка, превью ссылки в мессенджере, поиск и экранная читалка.
+  if (typeof document !== 'undefined' && (root === document || root === document.documentElement)) {
+    document.documentElement.lang = LANG;
+  }
   root.querySelectorAll('[data-i18n-' + LANG + ']').forEach(el => {
     el.innerHTML = el.getAttribute('data-i18n-' + LANG);
   });
