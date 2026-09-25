@@ -9,6 +9,11 @@
 # Здесь нет ни RTL, ни QEMU: им нужны verilator, emsdk и часы. Прогон машины
 # берёт собранные risc5.js и risc5.wasm прямо из репозитория — они там лежат
 # потому, что Pages раздаёт статику как есть.
+#
+# Проверки разведены по стоимости. Быстрые (секунды) идут на каждый пуш.
+# Лаборатории гоняют настоящую машину — девять загрузок Оберона, около
+# четверти часа, — и потому идут только на разбор правки: в main приезжает
+# ровно то, что уже прошло их в запросе на слияние.
 name: check
 
 on:
@@ -18,7 +23,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  web:
+  # Секунды.
+  fast:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,12 +41,6 @@ jobs:
         run: python3 tools/mkbook.py
         working-directory: impl
 
-      # Лаборатории: каждая обязана перейти из «не сделано» в «сделано» от
-      # предусмотренных действий. Гоняет настоящую машину на wasm.
-      - name: Лаборатории
-        run: node labs-test.mjs
-        working-directory: impl/web
-
       # Сайт: состав и все местные ссылки. Именно этой проверки не хватало,
       # когда /oberon/book/en/ отдавал живой 404.
       - name: Сборка сайта
@@ -51,3 +51,19 @@ jobs:
       # и копия сайта, только внутри одного каталога.
       - name: Собранное совпадает с тем, что в репозитории
         run: git diff --exit-code -- impl/web/book
+
+  # Четверть часа: девять лабораторных, каждая на своей загрузке Оберона.
+  # Лаборатория, проверка которой всегда зелёная или всегда красная,
+  # бесполезна, поэтому прогон требует перехода «не сделано» → «сделано».
+  labs:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Лаборатории
+        run: node labs-test.mjs
+        working-directory: impl/web
