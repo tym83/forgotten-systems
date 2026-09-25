@@ -1,0 +1,80 @@
+# Образ virt-launcher с libvirt, знающим архитектуру RISC5.
+#
+# Форкается ТОЛЬКО libvirt, и патч в нём — шесть строк в четырёх таблицах.
+# Сам KubeVirt не трогаем: перехватчик OnDefineDomain — штатная точка, а
+# реестр образов переключается настройкой на ресурсе KubeVirt, так что и
+# Cozystack форка не требует.
+#
+# Собирается под ту же основу, что у штатного образа — CentOS Stream 9 и
+# libvirt 11.9.0. Взять сборку с другой основы нельзя: разойдутся библиотеки.
+
+# ── Сборка libvirt ─────────────────────────────────────────────────────────
+FROM quay.io/centos/centos:stream9 AS libvirt-build
+
+# Зависимости берём не списком, а тем набором, которым libvirt собирается в
+# самом дистрибутиве: перебирать их по одной — долго и ненадёжно.
+# CRB нужен отдельно: meson, ninja и часть заголовков лежат там.
+RUN dnf install -y --setopt=install_weak_deps=False dnf-plugins-core \
+ && dnf config-manager --set-enabled crb \
+ && dnf install -y --setopt=install_weak_deps=False \
+      git meson ninja-build gcc make python3 rpm-build \
+ && dnf builddep -y --setopt=install_weak_deps=False libvirt \
+ && dnf clean all
+
+ARG LIBVIRT_VERSION=v11.9.0
+RUN git clone --depth 1 -b ${LIBVIRT_VERSION} \
+      https://github.com/libvirt/libvirt.git /src
+
+COPY patch_libvirt.py /src/
+WORKDIR /src
+RUN python3 patch_libvirt.py
+
+# Собираем только то, что нужно: драйвер QEMU и общую библиотеку.
+RUN meson setup build --prefix=/usr --libdir=/usr/lib64 \
+      -Ddriver_qemu=enabled -Dtests=disabled -Ddocs=disabled \
+      -Ddriver_libxl=disabled -Ddriver_lxc=disabled -Ddriver_vbox=disabled \
+ && ninja -C build \
+ && DESTDIR=/out ninja -C build install
+
+# ── Сборка эмулятора ───────────────────────────────────────────────────────
+#
+# ⚠ Собирать надо здесь же, а не приносить готовый: образ virt-launcher стоит
+# на CentOS 9, и бинарь с Ubuntu в нём не запускается — «GLIBC_2.38 not found».
+FROM quay.io/centos/centos:stream9 AS qemu-build
+
+RUN dnf install -y --setopt=install_weak_deps=False dnf-plugins-core \
+ && dnf config-manager --set-enabled crb \
+ && dnf install -y --setopt=install_weak_deps=False \
+      git meson ninja-build gcc make \
+      python3.12 python3.12-devel \
+      glib2-devel pixman-devel zlib-devel flex bison \
+ && dnf clean all
+
+# ⚠ Свежему QEMU нужен Python 3.12, а базовый в CentOS 9 — 3.9. Ставим рядом
+# и указываем явно: подменять системный нельзя, на нём держится dnf.
+ENV PYTHON=/usr/bin/python3.12
+
+COPY qemu-target /src/qemu-target
+RUN git clone --depth 1 https://gitlab.com/qemu-project/qemu.git /src/qemu \
+ || git clone --depth 1 https://github.com/qemu/qemu.git /src/qemu
+RUN /src/qemu-target/graft.sh /src/qemu \
+ && cd /src/qemu \
+ && ./configure --target-list=risc5-softmmu --disable-docs --disable-tools \
+      --disable-guest-agent --without-default-features \
+      --python=/usr/bin/python3.12 \
+ && ninja -C build qemu-system-risc5
+
+# ── Готовый образ ──────────────────────────────────────────────────────────
+FROM quay.io/kubevirt/virt-launcher:v1.8.4
+
+# Подменяем только библиотеки libvirt: всё остальное в образе штатное.
+COPY --from=libvirt-build /out/usr/lib64/libvirt.so.* /usr/lib64/
+COPY --from=libvirt-build /out/usr/lib64/libvirt/connection-driver/libvirt_driver_qemu.so \
+                          /usr/lib64/libvirt/connection-driver/
+
+# Эмулятор кладём сюда же: так он есть и без общего тома, а том остаётся
+# способом принести машину, которой в образе нет.
+COPY --from=qemu-build /src/qemu/build/qemu-system-risc5 /usr/local/bin/
+
+# Перехватчик может прийти скриптом из ConfigMap, но пусть будет и в образе.
+COPY onDefineDomain.py /usr/bin/onDefineDomain
