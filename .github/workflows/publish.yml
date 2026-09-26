@@ -124,6 +124,77 @@ jobs:
           echo "${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
+  # ── Образ virt-launcher с машиной RISC5 ───────────────────────────────────
+  #
+  # Эмулятор в кластере живёт здесь, а не в oberon-run: тот несёт только ПЗУ
+  # и диск. Раньше этот образ собирался руками на стенде, и выложенный отставал
+  # от кода — свойства chk в нём не было, хотя каталог уже умел его просить.
+  #
+  # Тег несёт версию KubeVirt: launcher обязан совпадать с ней (находка 44).
+  launcher:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      # install: true — чтобы `docker build` внутри build.sh шёл через buildx
+      # и умел кэш, подпись происхождения и выкладку.
+      - uses: docker/setup-buildx-action@v3
+        with:
+          install: true
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: sigstore/cosign-installer@v3
+
+      - id: meta
+        run: |
+          tag="${{ github.event.inputs.tag }}"
+          [ -n "$tag" ] || tag="${GITHUB_REF##*/}"
+          [ "$tag" != "$GITHUB_REF" ] || tag=dev
+          kv=$(sed -n 's|^FROM quay.io/kubevirt/virt-launcher:||p' kubevirt/Containerfile)
+          [ -n "$kv" ] || { echo "не найдена версия KubeVirt в Containerfile"; exit 1; }
+          owner=$(echo "${{ github.repository_owner }}" | tr 'A-Z' 'a-z')
+          echo "image=${{ env.REGISTRY }}/$owner/paleocomputing/virt-launcher" >> "$GITHUB_OUTPUT"
+          echo "tag=$kv-risc5-$tag" >> "$GITHUB_OUTPUT"
+
+      - id: build
+        run: |
+          set -euo pipefail
+          kubevirt/build.sh "${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.tag }}" \
+            --push --provenance=true --sbom=true \
+            --cache-from type=gha,scope=launcher \
+            --cache-to type=gha,scope=launcher,mode=max \
+            --metadata-file /tmp/meta.json
+          echo "digest=$(jq -r '."containerimage.digest"' /tmp/meta.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Подписать образ
+        run: cosign sign --yes "${{ steps.meta.outputs.image }}@${{ steps.build.outputs.digest }}"
+
+      # Содержимое, а не факт сборки: машина в образе должна знать chk —
+      # ради этого образ и пересобирается.
+      - name: Проверить, что эмулятор знает chk
+        run: |
+          set -euo pipefail
+          ref="${{ steps.meta.outputs.image }}@${{ steps.build.outputs.digest }}"
+          docker run --rm --entrypoint /usr/local/bin/qemu-system-risc5 "$ref" \
+            -machine oberon,help | tee /tmp/props.txt
+          grep -q '^ *chk=' /tmp/props.txt || { echo "❌ у машины нет свойства chk"; exit 1; }
+          docker run --rm --entrypoint sh "$ref" -c 'test -x /usr/bin/onDefineDomain' \
+            || { echo "❌ в образе нет перехватчика"; exit 1; }
+
+      - name: Итог
+        run: |
+          echo "### virt-launcher" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.tag }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
   # ── Три репозитория каталога как OCI-артефакты ────────────────────────────
   #
   # Публикует их flux: артефакт каталога — это не образ контейнера, а слепок

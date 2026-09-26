@@ -1,0 +1,9 @@
+# Контекст — корень репозитория, но образу нужны три вещи. Остальное
+# (дерево QEMU в .qemu-work — гигабайты) в сборку уезжать не должно.
+*
+!qemu/graft.sh
+!qemu/target/
+!qemu/hw/
+!qemu/configs/
+!qemu/libvirt/patch_libvirt.py
+!kubevirt/onDefineDomain.py
