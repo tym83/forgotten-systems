@@ -12,11 +12,12 @@
 - Диск: было 100% занято (журнал QEMU в контейнере), вычищено, свободно ~60 ГБ.
 
 ## Следующий шаг
-Ветка `fix/launcher-chk` (не запушена): QEMU в launcher пинится из qemu/Makefile
-через `kubevirt/build.sh`, задание `launcher` в publish.yml. Стадия qemu-build собрана
-локально (arm64, legacy builder): дерево по коммиту, `-machine oberon,help` → `chk=<bool>`. Дальше: пуш, PR, прогон publish вручную
-(workflow_dispatch) → образ `virt-launcher:v1.8.4-risc5-<тег>`. Подмена launcher
-в кластере — решение пользователя (действует на весь кластер, там tenant-paleo).
+PR #16 влит. Пользователь запускает `gh workflow run publish.yml --ref main -f tag=dev`
+(классификатор режет). После зелёного `launcher` — подмена в кластере `workshop`
+(`~/eng-cluster-admin.kubeconfig`, контекст `admin@workshop`): в KubeVirt
+`cozy-kubevirt/kubevirt` → `customizeComponents` → аргумент `--launcher-image`
+`...virt-launcher:v1.8.4-risc5` → `...:v1.8.4-risc5-dev`. Пользователь одобрил.
+**Откат:** вернуть `v1.8.4-risc5` в том же аргументе.
 
 ## Хвосты
 1. **Лаборатория в браузере не проверена глазами.** Переведена на компонент с

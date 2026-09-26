@@ -103,7 +103,7 @@ jobs:
           set -euo pipefail
           ref="${{ steps.meta.outputs.image }}@${{ steps.build.outputs.digest }}"
           case "${{ matrix.name }}" in
-            oberon-web) want="risc5.wasm risc5.js oberon.dsk prom_sd.mem lab.html"
+            oberon-web) want="risc5.wasm risc5.js risc5-chk.wasm risc5-chk.js bench_bounds.json oberon.dsk prom_sd.mem lab.html checks.html"
                         dir=/usr/share/nginx/html ;;
             oberon-run) want="prom.bin oberon.dsk"
                         dir=/opt/oberon/payload ;;
