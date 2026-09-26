@@ -7,6 +7,10 @@
 #
 # Собирается под ту же основу, что у штатного образа — CentOS Stream 9 и
 # libvirt 11.9.0. Взять сборку с другой основы нельзя: разойдутся библиотеки.
+#
+# Контекст сборки — корень репозитория, а коммит QEMU передаётся снаружи:
+# он записан один раз, в qemu/Makefile. Собирать через kubevirt/build.sh —
+# он читает коммит оттуда же, откуда его берут проверки.
 
 # ── Сборка libvirt ─────────────────────────────────────────────────────────
 FROM quay.io/centos/centos:stream9 AS libvirt-build
@@ -25,7 +29,7 @@ ARG LIBVIRT_VERSION=v11.9.0
 RUN git clone --depth 1 -b ${LIBVIRT_VERSION} \
       https://github.com/libvirt/libvirt.git /src
 
-COPY patch_libvirt.py /src/
+COPY qemu/libvirt/patch_libvirt.py /src/
 WORKDIR /src
 RUN python3 patch_libvirt.py
 
@@ -55,9 +59,20 @@ RUN dnf install -y --setopt=install_weak_deps=False dnf-plugins-core \
 # и указываем явно: подменять системный нельзя, на нём держится dnf.
 ENV PYTHON=/usr/bin/python3.12
 
-COPY qemu-target /src/qemu-target
-RUN git clone --depth 1 https://gitlab.com/qemu-project/qemu.git /src/qemu \
- || git clone --depth 1 https://github.com/qemu/qemu.git /src/qemu
+# ⚠ Дерево QEMU — тем же коммитом, что у проверок. Раньше здесь брался
+# свежий master: образ собирался из другой машины, чем та, что сверена с RTL,
+# и пересборка через неделю давала третью.
+ARG QEMU_REF
+RUN test -n "${QEMU_REF}" || { echo "QEMU_REF не задан: собирать через kubevirt/build.sh"; exit 1; } \
+ && mkdir /src/qemu && cd /src/qemu && git init -q \
+ && { git fetch --depth 1 -q https://gitlab.com/qemu-project/qemu.git "${QEMU_REF}" \
+   || git fetch --depth 1 -q https://github.com/qemu/qemu.git "${QEMU_REF}"; } \
+ && git checkout -q FETCH_HEAD
+
+COPY qemu/graft.sh      /src/qemu-target/
+COPY qemu/target        /src/qemu-target/target
+COPY qemu/hw            /src/qemu-target/hw
+COPY qemu/configs       /src/qemu-target/configs
 RUN /src/qemu-target/graft.sh /src/qemu \
  && cd /src/qemu \
  && ./configure --target-list=risc5-softmmu --disable-docs --disable-tools \
@@ -79,4 +94,4 @@ COPY --from=libvirt-build /out/usr/lib64/libvirt/connection-driver/libvirt_drive
 COPY --from=qemu-build /src/qemu/build/qemu-system-risc5 /usr/local/bin/
 
 # Перехватчик может прийти скриптом из ConfigMap, но пусть будет и в образе.
-COPY onDefineDomain.py /usr/bin/onDefineDomain
+COPY kubevirt/onDefineDomain.py /usr/bin/onDefineDomain
