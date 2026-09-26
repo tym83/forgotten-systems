@@ -13,8 +13,8 @@
 
 ## Следующий шаг
 Ветка `fix/launcher-chk` (не запушена): QEMU в launcher пинится из qemu/Makefile
-через `kubevirt/build.sh`, задание `launcher` в publish.yml. Идёт локальная сборка
-стадии qemu-build (colima запущена). Дальше: пуш, PR, прогон publish вручную
+через `kubevirt/build.sh`, задание `launcher` в publish.yml. Стадия qemu-build собрана
+локально (arm64, legacy builder): дерево по коммиту, `-machine oberon,help` → `chk=<bool>`. Дальше: пуш, PR, прогон publish вручную
 (workflow_dispatch) → образ `virt-launcher:v1.8.4-risc5-<тег>`. Подмена launcher
 в кластере — решение пользователя (действует на весь кластер, там tenant-paleo).
 
@@ -55,3 +55,10 @@ CHK в QEMU (декодер + транслятор), свойство машин
   `virt-launcher:v1.8.4-risc5` старше CHK.
 - `kubevirt/Containerfile` клонирует QEMU без пина (HEAD), хотя в #15 дерево
   закреплено `QEMU_REF` в `qemu/Makefile`. Нужно пинить тем же коммитом.
+
+### 26.09 вечер — launcher из закреплённого дерева
+- `kubevirt/build.sh` + `Containerfile.dockerignore`, контекст — корень репо.
+- Локально (colima, без buildx → DOCKER_BUILDKIT=0) нашлась ошибка: в стадии
+  qemu-build нет /src → `mkdir -p`. После правки стадия собралась, `chk` есть.
+- Финальная стадия (FROM virt-launcher:v1.8.4, amd64) локально не собиралась —
+  проверит CI.
