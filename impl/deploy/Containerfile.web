@@ -36,16 +36,22 @@ COPY rtl/ ./rtl/
 COPY tb/ ./tb/
 COPY ext/disk/ ./ext/disk/
 COPY Makefile ./
+# Генератор нагрузки и ассемблер: `make web` собирает и замер цены проверки
+# границ, а без них падает на первой же цели нагрузки.
+COPY tools/ ./tools/
 # ⚠ Каталог под промежуточные файлы создаём сами: цель verilator его не
-# заводит, и он пишет в несуществующий путь.
-RUN mkdir -p web build/obj_wasm && make web \
- && ls -la web/risc5.js web/risc5.wasm web/oberon.dsk web/prom_sd.mem
+# заводит, и он пишет в несуществующий путь. tests/ — туда пишет генератор.
+RUN mkdir -p web tests build/obj_wasm && make web \
+ && ls -la web/risc5.js web/risc5.wasm web/risc5-chk.js web/risc5-chk.wasm \
+           web/oberon.dsk web/prom_sd.mem web/bench_bounds.json
 
 FROM docker.io/nginxinc/nginx-unprivileged:1.29-alpine
 
 COPY --chown=101:101 web/ /usr/share/nginx/html/
 # Машина кладётся поверх: страницы приходят из репозитория, машина из сборки.
 COPY --from=machine --chown=101:101 /src/web/risc5.js /src/web/risc5.wasm \
+     /src/web/risc5-chk.js /src/web/risc5-chk.wasm \
+     /src/web/bench_bounds_b.bin /src/web/bench_bounds_e.bin /src/web/bench_bounds.json \
      /src/web/prom_sd.mem /src/web/oberon.dsk /usr/share/nginx/html/
 
 # WASM без правильного типа браузер отказывается компилировать потоком.
