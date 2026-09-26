@@ -18,6 +18,7 @@
  * `self` нет, а протокол проверять надо.
  */
 import { Machine } from './machine.js';
+import { LABS } from './labs.js';
 
 /**
  * Собирает обработчик сообщений. `post(msg, transfer)` — как postMessage.
@@ -25,6 +26,8 @@ import { Machine } from './machine.js';
  */
 export function createHandler(post) {
   let m = null;
+  // Состояние лабораторных по номеру: их шаги накапливают его между проверками.
+  const state = {};
   // Буферы под кадры ходят по кругу: страница возвращает отрисованный обратно
   // сообщением `recycle`. Без этого на каждый кадр выделяется 96 КБ, и сборщик
   // мусора просыпается шестьдесят раз в секунду.
@@ -34,14 +37,18 @@ export function createHandler(post) {
     const fb = m.fb();
     const buf = pool.pop() || new ArrayBuffer(fb.length * 4);
     new Uint32Array(buf).set(fb);
-    post({ t: 'frame', buf, insns: m.insns, cycles: m.cycles, pc: m.pc, ...extra }, [buf]);
+    // Контрольная сумма экрана идёт вместе с кадром: по ней страница
+    // показывает единственное, что человеку важно, — рисует машина или замерла.
+    post({ t: 'frame', buf, insns: m.insns, cycles: m.cycles, pc: m.pc,
+           crc: m.fbCrc(), ...extra }, [buf]);
   }
 
   return async function handle(msg) {
     switch (msg.t) {
       case 'init':
-        m = await Machine.create(new Uint32Array(msg.prom), new Uint8Array(msg.img));
-        post({ t: 'ready' });
+        m = await Machine.create(new Uint32Array(msg.prom), new Uint8Array(msg.img),
+                                 msg.variant || 'base');
+        post({ t: 'ready', variant: m.variant });
         return;
 
       case 'run':
@@ -62,6 +69,35 @@ export function createHandler(post) {
         m.mouse(msg.x | 0, msg.y | 0, msg.then | 0);
         return;
 
+      // ── лабораторные ──────────────────────────────────────────────────────
+      // Проверка задания читает регистры, память и экран машины, поэтому
+      // исполняется ЗДЕСЬ, рядом с машиной. Иначе страница тянула бы через
+      // границу потока всё состояние целиком на каждый щелчок.
+      case 'check': {
+        const lab = LABS.find(l => l.id === msg.lab);
+        const step = lab && lab.steps[msg.step];
+        if (!step) { post({ t: 'check', id: msg.id, ok: false, msg: 'нет такого шага' }); return; }
+        state[msg.lab] ??= {};
+        let r;
+        try {
+          r = step.check(m, { state: state[msg.lab], answer: msg.answer || '' });
+        } catch (e) {
+          r = { ok: false, msg: String(e && e.message || e) };
+        }
+        post({ t: 'check', id: msg.id, ok: !!r.ok, msg: r.msg || '' });
+        return;
+      }
+
+      // Состояние лабораторной живёт рядом с машиной: шаги опираются на то,
+      // что запомнил предыдущий, а машина у них общая.
+      case 'forget':
+        state[msg.lab] = {};
+        return;
+
+      case 'poke':
+        m.poke(msg.adr >>> 0, msg.val >>> 0);
+        return;
+
       case 'reset':
         m.reset();
         frame({ reset: true });
@@ -74,7 +110,10 @@ export function createHandler(post) {
       // Для лабораторных и проверок: заглянуть внутрь машины.
       case 'peek':
         post({ t: 'peek', id: msg.id, regs: Array.from({ length: 16 }, (_, i) => m.reg(i)),
-               flags: m.flags(), h: m.h(), pc: m.pc, insns: m.insns, crc: m.fbCrc() });
+               flags: m.flags(), h: m.h(), pc: m.pc, insns: m.insns, crc: m.fbCrc(),
+               // Слово по адресу — для лабораторных, где человек пишет в память
+               // и должен увидеть, что именно туда легло.
+               word: msg.adr === undefined ? undefined : m.ram(msg.adr >>> 0) });
         return;
 
       default:

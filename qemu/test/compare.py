@@ -42,8 +42,13 @@ def in_qemu(binpath):
 
 
 def main():
-    src = IMPL / "build/qtest/t.s"
-    binp = IMPL / "build/qtest/t.bin"
+    # ⚠ Источник берётся из репозитория, а не из build/: раньше здесь лежала
+    # копия, положенная руками, и на чистом дереве проверка просто не
+    # запускалась бы — а выглядела бы «зелёной, просто не прогнанной».
+    src = pathlib.Path(__file__).resolve().parent / "prog.s"
+    work = IMPL / "build/qtest"
+    work.mkdir(parents=True, exist_ok=True)
+    binp = work / "prog.bin"
     subprocess.run([sys.executable, str(IMPL / "tools/asm.py"), str(src),
                     "-o", str(binp.with_suffix(""))], check=True,
                    capture_output=True, cwd=IMPL)

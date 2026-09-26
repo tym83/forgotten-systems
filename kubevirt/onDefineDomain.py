@@ -20,11 +20,15 @@ KubeVirt позволяет стороннему контейнеру переп
   * число процессоров приводится к одному: у машины Вирта он один, и libvirt
     отвергает описание, где запрошено больше
     («Maximum CPUs greater than specified machine type limit 1»);
-  * добавляются ПЗУ и образ диска — привычной микропрограммы у машины нет.
+  * добавляются ПЗУ и образ диска — привычной микропрограммы у машины нет;
+  * выбирается ВАРИАНТ ЖЕЛЕЗА: аннотация `oberon.paleocomputing/chk: "on"`
+    включает аппаратную проверку границ массива — то же, что `-DWITH_CHK` при
+    сборке RTL и переключатель железа на странице. Без неё машина базовая.
 
 Запускается обёрткой sidecar-shim: она ищет исполняемый файл с именем
 onDefineDomain и передаёт описание аргументами.
 """
+import json
 import sys
 import xml.etree.ElementTree as ET
 
@@ -35,6 +39,9 @@ PROM     = '/var/run/risc5/prom.bin'
 DISK     = '/var/run/risc5/oberon.dsk'
 
 QEMU_NS = 'http://libvirt.org/schemas/domain/qemu/1.0'
+
+# Аннотация, которой выбирают вариант железа. Имя то же, что в пакете каталога.
+CHK_ANNOTATION = 'oberon.paleocomputing/chk'
 
 
 def arg(name):
@@ -48,7 +55,25 @@ def arg(name):
     return None
 
 
-def convert(domain_xml):
+def wants_chk(vmi_json):
+    """Просили ли машину с аппаратной проверкой границ.
+
+    Вариант железа — свойство машины, а не режим эмулятора: в RTL он
+    включается -DWITH_CHK, в QEMU — `-machine oberon,chk=on`. Снаружи его
+    выбирают аннотацией, чтобы в кластере и в браузере можно было получить
+    одно и то же железо.
+    """
+    if not vmi_json:
+        return False
+    try:
+        obj = json.loads(vmi_json)
+    except (ValueError, TypeError):
+        return False
+    ann = (obj.get('metadata') or {}).get('annotations') or {}
+    return str(ann.get(CHK_ANNOTATION, '')).strip().lower() in ('on', 'true', 'yes', '1')
+
+
+def convert(domain_xml, chk=False):
     ET.register_namespace('qemu', QEMU_NS)
     root = ET.fromstring(domain_xml)
 
@@ -138,8 +163,16 @@ def convert(domain_xml):
     for el in root.findall('{%s}commandline' % QEMU_NS):
         root.remove(el)
     cl = ET.SubElement(root, '{%s}commandline' % QEMU_NS)
-    for v in ('-bios', PROM,
-              '-drive', f'if=none,id=sd0,file={DISK},format=raw'):
+    args = ['-bios', PROM,
+            '-drive', f'if=none,id=sd0,file={DISK},format=raw']
+    if chk:
+        # ⚠ Вторым `-machine`, а не правкой атрибута machine в описании: там
+        # libvirt допускает только имя машины. QEMU сливает опции в одну
+        # группу, и неизвестное свойство честно роняет запуск
+        # («Property 'oberon-machine.chkk' not found»), так что опечатка не
+        # пройдёт молча.
+        args += ['-machine', 'chk=on']
+    for v in args:
         ET.SubElement(cl, '{%s}arg' % QEMU_NS, {'value': v})
 
     return ET.tostring(root, encoding='unicode')
@@ -149,7 +182,7 @@ def main():
     domain_xml = arg('domain')
     if not domain_xml:
         sys.exit('перехватчику не передали описание домена')
-    print(convert(domain_xml))
+    print(convert(domain_xml, chk=wants_chk(arg('vmi'))))
 
 
 if __name__ == '__main__':

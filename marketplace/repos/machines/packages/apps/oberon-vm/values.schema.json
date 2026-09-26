@@ -3,15 +3,55 @@
   "title": "oberon-vm",
   "type": "object",
   "$comment": "Корень схемы НЕ закрыт намеренно: cozystack-engine подмешивает в values любого приложения тенанта свои ключи (_cluster, _namespace), и при additionalProperties:false Helm отвергает значения целиком — приложение не разворачивается. Ни один чарт платформы корень не закрывает. Вложенные объекты закрыты: туда движок ничего не кладёт.",
-  "required": ["memory", "emulatorImage", "storageClass", "storage"],
+  "required": [
+    "memory",
+    "emulatorImage",
+    "storageClass",
+    "storage"
+  ],
   "properties": {
-    "memory":        { "type": "string", "minLength": 1, "default": "128Mi" },
-    "running":       { "type": "boolean", "default": true },
-    "emulatorImage": { "type": "string", "minLength": 1,
-                       "default": "ghcr.io/tym83/paleocomputing/oberon-run:v0.1.4" },
-    "prom":          { "type": "string", "pattern": "^/.*", "default": "/payload/prom.bin" },
-    "disk":          { "type": "string", "pattern": "^/.*", "default": "/payload/oberon.dsk" },
-    "storageClass":  { "type": "string", "minLength": 1, "default": "replicated" },
-    "storage":       { "type": "string", "minLength": 1, "default": "1Gi" }
+    "memory": {
+      "type": "string",
+      "minLength": 1,
+      "default": "128Mi"
+    },
+    "running": {
+      "type": "boolean",
+      "default": true
+    },
+    "emulatorImage": {
+      "type": "string",
+      "minLength": 1,
+      "default": "ghcr.io/tym83/paleocomputing/oberon-run:v0.1.4"
+    },
+    "prom": {
+      "type": "string",
+      "pattern": "^/.*",
+      "default": "/payload/prom.bin"
+    },
+    "disk": {
+      "type": "string",
+      "pattern": "^/.*",
+      "default": "/payload/oberon.dsk"
+    },
+    "storageClass": {
+      "type": "string",
+      "minLength": 1,
+      "default": "replicated"
+    },
+    "storage": {
+      "type": "string",
+      "minLength": 1,
+      "default": "1Gi"
+    },
+    "hardware": {
+      "type": "string",
+      "description": "Вариант железа: base — ядро Вирта как есть, chk — с аппаратной проверкой границ массива",
+      "enum": [
+        "base",
+        "chk"
+      ],
+      "default": "base"
+    }
   }
 }

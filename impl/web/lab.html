@@ -39,11 +39,11 @@
      чуть мылить на нецелом масштабе), остальные дают точный размер, а если он
      больше колонки — прокручивается сама рамка экрана, не страница. */
   .stage { --k:1; min-width:0; min-height:0; overflow:auto }
-  canvas { image-rendering:pixelated; border:1px solid var(--line);
-           background:#fff; display:block; margin:0 auto;
-           width:calc(1024px * var(--k)); height:auto;
-           max-width:none; aspect-ratio:1024/768 }
-  .stage.fit canvas { width:100%; max-width:100% }
+  /* ⚠ Размер задаётся САМОЙ МАШИНЕ, а не канве: канва живёт в теневом дереве
+     компонента, куда стили страницы не достают. */
+  oberon-machine { display:block; border:1px solid var(--line); background:#fff;
+                   margin:0 auto; width:calc(1024px * var(--k)); max-width:none }
+  .stage.fit oberon-machine { width:100%; max-width:100% }
 
   /* На узком экране колонки схлопываются, и держать всё враспор нечем:
      возвращаемся к обычной прокрутке страницы. */
@@ -52,7 +52,7 @@
     body { overflow:visible; display:block }
     main { display:block; min-height:0 }
     .panel, .stage { overflow:visible; min-height:0 }
-    .stage.fit canvas { width:100% }
+    .stage.fit oberon-machine { width:100% }
   }
   .panel > section { border:1px solid var(--line); border-radius:8px; padding:12px;
                      margin-bottom:12px }
@@ -107,7 +107,7 @@
 </header>
 
 <main>
-  <div class="stage"><canvas id="cv" width="1024" height="768"></canvas></div>
+  <div class="stage"><oberon-machine id="cv" autostart></oberon-machine></div>
   <div class="panel">
     <section>
       <b id="title"></b> <span class="stat" id="level"></span>
@@ -133,7 +133,8 @@
 </main>
 
 <script type="module">
-import { Machine, attach, labelAltKeys, ALT_LABEL } from './machine.js';
+import { labelAltKeys, ALT_LABEL } from './machine.js';
+import './embed.js';
 import { LANG, LANGS, setLang, applyMarkup } from './i18n.js';
 import { LABS } from './labs.js';
 
@@ -160,11 +161,14 @@ function LANGS_FILL() {
   sel.onchange = e => setLang(e.target.value);
 }
 
-const prom = new Uint32Array((await (await fetch('prom_sd.mem')).text())
-  .trim().split('\n').map(l => parseInt(l, 16)));
-const img = new Uint8Array(await (await fetch('oberon.dsk')).arrayBuffer());
-const m = await Machine.create(prom, img);
-const view = attach(m, $('cv'));
+/*
+ * Машина считает в отдельном потоке (см. embed.js): лаборатория — это
+ * страница с текстом, формами и проверками, и эмулятор не должен отбирать у
+ * неё главный поток. Проверки заданий читают регистры и память, поэтому
+ * исполняются ТАМ ЖЕ, рядом с машиной, а сюда приходит только вердикт.
+ */
+const m = $('cv');
+if (LANG === 'ru') m.setAttribute('start-label', 'Запустить машину');
 
 let lab = LABS[0];
 
@@ -203,8 +207,8 @@ function render() {
       inp.placeholder = st.answer;
       inp.style.width = '150px';
     }
-    b.onclick = () => {
-      const r = st.check(m, { state: lab.state ??= {}, answer: inp ? inp.value : '' });
+    b.onclick = async () => {
+      const r = await m.check(lab.id, i, inp ? inp.value : '');
       res.className = 'res ' + (r.ok ? 'ok' : 'no');
       res.textContent = (r.ok ? '✅ ' : '— ') + r.msg;
       li.classList.toggle('done', r.ok);
@@ -219,7 +223,7 @@ function render() {
 }
 
 let lastCrc = -1;
-$('pick').onchange = e => { lab = LABS[+e.target.value]; lab.state = {}; render(); };
+$('pick').onchange = e => { lab = LABS[+e.target.value]; m.forget(lab.id); render(); };
 // Масштаб экрана. Выбор запоминается: человек настраивает его один раз.
 const stage = document.querySelector('.stage'), zoom = $('zoom');
 function applyZoom(k) {
@@ -240,10 +244,11 @@ zoom.onchange = () => {
 // Переключатель кнопки: на трекпаде средней нет, а правой протяжки не бывает.
 $('btn').onchange = e => m.setButton(+e.target.value);
 
-$('reset').onclick = () => { m.reset(); lab.state = {}; view.draw(); render(); };
+$('reset').onclick = () => { m.reset(); m.forget(lab.id); render(); };
 $('pause').onclick = () => {
-  if (view.running) { view.stop(); $('pause').textContent = 'Пуск'; }
-  else { view.start(); $('pause').textContent = 'Пауза'; }
+  const ru = LANG === 'ru';
+  if (m.running) { m.stop(); $('pause').textContent = ru ? 'Пуск' : 'Run'; }
+  else { m.start(); $('pause').textContent = ru ? 'Пауза' : 'Pause'; }
 };
 $('poke').onclick = () => {
   const a = parseInt($('adr').value, 16), v = parseInt($('val').value, 16);
@@ -252,15 +257,16 @@ $('poke').onclick = () => {
 };
 
 render();
-view.start();
-setInterval(() => {
-  // Сумма кадрового буфера сама по себе человеку ничего не говорит — показываем
-  // из неё то единственное, что важно: рисует машина или замерла.
-  const crc = m.fbCrc(), drawing = crc !== lastCrc; lastCrc = crc;
+
+// Состояние приходит вместе с кадром: отдельного опроса машины больше нет —
+// спрашивать её через границу потока пришлось бы на каждый тик.
+let lastCrc = -1;
+m.addEventListener('oberon-frame', e => {
+  const d = e.detail;
+  const drawing = d.crc !== lastCrc; lastCrc = d.crc;
   $('stat').textContent =
     (LANG === 'ru'
-      ? `${(m.insns / 1e6).toFixed(1)} млн команд · адрес ${hex(m.pc)} · экран ${drawing ? 'меняется' : 'замер'}`
-      : `${(m.insns / 1e6).toFixed(1)}M instructions · at ${hex(m.pc)} · screen ${drawing ? 'changing' : 'still'}`);
-  $('pc').textContent = hex(m.pc);
-}, 250);
-</script>
+      ? `${(d.insns / 1e6).toFixed(1)} млн команд · адрес ${hex(d.pc)} · экран ${drawing ? 'меняется' : 'замер'}`
+      : `${(d.insns / 1e6).toFixed(1)}M instructions · at ${hex(d.pc)} · screen ${drawing ? 'changing' : 'still'}`);
+  $('pc').textContent = hex(d.pc);
+});

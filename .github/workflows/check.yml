@@ -41,6 +41,13 @@ jobs:
         run: python3 tools/mkbook.py
         working-directory: impl
 
+      # Разметка страниц: что скрипт ищет — то в ней и есть. Поломки этого
+      # рода браузер не показывает ошибкой, страница просто перестаёт
+      # слушаться.
+      - name: Разметка страниц
+        run: node page-test.mjs
+        working-directory: impl/web
+
       # Сайт: состав и все местные ссылки. Именно этой проверки не хватало,
       # когда /oberon/book/en/ отдавал живой 404.
       - name: Сборка сайта
@@ -73,4 +80,10 @@ jobs:
       # этого не увидит.
       - name: Протокол рабочего потока
         run: node worker-test.mjs
+        working-directory: impl/web
+
+      # Числа центрального номера: их видит читатель на странице, и считаются
+      # они тем же модулем, что и здесь.
+      - name: Цена проверки границ
+        run: node bench-test.mjs
         working-directory: impl/web

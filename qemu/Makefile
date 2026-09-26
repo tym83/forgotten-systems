@@ -26,11 +26,20 @@ check: $(QEMU_DECODETREE)
 # Сборка в контейнере: зависимости QEMU на машину разработчика не ставим.
 # QEMU_SRC — куда клонировать дерево, по умолчанию рядом, в .qemu-work.
 QEMU_SRC ?= ../.qemu-work
-QEMU_REF ?= master
+# ⚠ Дерево QEMU пинуется КОММИТОМ, а не веткой и не тегом.
+#
+# Веткой нельзя: master сегодня и master через неделю — разные машины, а сверка
+# с RTL, которая не воспроизводится, ничего не доказывает.
+#
+# Тегом не выходит: цель написана под текущий master, где заголовки лежат в
+# hw/core/ и system/. В 10.2 они ещё в hw/ и sysemu/, в 9.2 — тем более, и
+# сборка падает на первом же include. Проверено обоими.
+QEMU_REF ?= 942229961efea74b153c44c59188eb08375f10f1
 
 build:
-	@test -d $(QEMU_SRC) || git clone --depth 1 -b $(QEMU_REF) \
-	  https://gitlab.com/qemu-project/qemu.git $(QEMU_SRC)
+	@test -d $(QEMU_SRC) || { mkdir -p $(QEMU_SRC) && cd $(QEMU_SRC) && \
+	  git init -q && git remote add origin https://gitlab.com/qemu-project/qemu.git && \
+	  git fetch --depth 1 -q origin $(QEMU_REF) && git checkout -q FETCH_HEAD; }
 	@./graft.sh $(QEMU_SRC)
 	@docker build -q -f build/Containerfile -t qemu-build:risc5 . >/dev/null
 	@docker run --rm -v "$$(cd $(QEMU_SRC) && pwd):/src" qemu-build:risc5 \
