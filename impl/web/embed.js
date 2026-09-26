@@ -75,6 +75,7 @@ class OberonMachine extends HTMLElement {
     this.stop();
     this._worker.terminate();
     this._worker = null; this._ready = false; this._pending = false;
+    this._queued = [];
     this._t0 = 0;
     await this._boot();
     if (wasRunning) this.start();
@@ -160,6 +161,7 @@ class OberonMachine extends HTMLElement {
   _onMessage(msg) {
     if (msg.t === 'ready') {
       this._ready = true;
+      this._flush();
       this.dispatchEvent(new CustomEvent('oberon-ready'));
       this._kick();
       return;
@@ -195,7 +197,22 @@ class OberonMachine extends HTMLElement {
       detail: { insns: msg.insns, mhz, pc: msg.pc, crc: msg.crc } }));
   }
 
-  _send(msg) { if (this._worker && this._ready) this._worker.postMessage(msg); }
+  /*
+   * Сообщения, посланные до готовности машины, НЕ выбрасываются, а ждут её.
+   * Иначе щелчок «Проверить» в первые секунды уходил бы в никуда: обещание
+   * не разрешилось бы никогда, и кнопка молча переставала бы работать.
+   */
+  _send(msg) {
+    if (!this._worker) { (this._queued ??= []).push(msg); return; }
+    if (this._ready) { this._worker.postMessage(msg); return; }
+    (this._queued ??= []).push(msg);
+  }
+
+  _flush() {
+    const q = this._queued || [];
+    this._queued = [];
+    for (const msg of q) this._worker.postMessage(msg);
+  }
 
   /**
    * Запрос с ответом. Нужен там, где странице недостаточно кадра: проверка
