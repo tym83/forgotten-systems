@@ -305,6 +305,7 @@ labs: web book
 	@cd web && node labs-test.mjs
 	@cd web && node worker-test.mjs
 	@cd web && node bench-test.mjs
+	@cd web && node page-test.mjs
 
 # Полная пересборка системы Обероном внутри самой системы на RTL.
 # Три сессии: пачками, затем поодиночке то, что упало в ловушку 4 (исчерпание
