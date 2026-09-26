@@ -64,7 +64,7 @@ ENV PYTHON=/usr/bin/python3.12
 # и пересборка через неделю давала третью.
 ARG QEMU_REF
 RUN test -n "${QEMU_REF}" || { echo "QEMU_REF не задан: собирать через kubevirt/build.sh"; exit 1; } \
- && mkdir /src/qemu && cd /src/qemu && git init -q \
+ && mkdir -p /src/qemu && cd /src/qemu && git init -q \
  && { git fetch --depth 1 -q https://gitlab.com/qemu-project/qemu.git "${QEMU_REF}" \
    || git fetch --depth 1 -q https://github.com/qemu/qemu.git "${QEMU_REF}"; } \
  && git checkout -q FETCH_HEAD
