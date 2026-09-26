@@ -92,7 +92,8 @@ def in_qemu(binpath, budget, chk):
         raise SystemExit(f"  ❌ в журнале QEMU только {len(blocks)} команд, нужно {idx + 1}")
     blk = blocks[idx]
     regs = {int(m[0]): int(m[1], 16) for m in re.findall(r"R(\d+)\s+([0-9a-f]{8})", blk)}
-    return [regs.get(i, -1) for i in range(16)]
+    pc = int(re.match(r"([0-9a-f]{8})", blk).group(1), 16)
+    return [regs.get(i, -1) for i in range(16)], pc
 
 
 def main():
@@ -103,7 +104,19 @@ def main():
         raise SystemExit("  ❌ нет web/bench_bounds_e.bin — соберите: make -C impl web")
 
     rtl = in_rtl(binp, BUDGET)
-    qemu = in_qemu(binp, BUDGET, chk=True)
+    qemu, qpc = in_qemu(binp, BUDGET, chk=True)
+
+    # ⚠ Сначала сверяем, что сравниваем ОДНУ И ТУ ЖЕ точку. Если журнал съехал
+    # на команду, разойдётся ровно один регистр — тот, который пишет соседняя
+    # команда, и это выглядит как ошибка реализации. Такое уже принимали за
+    # неё дважды, поэтому расхождение выравнивания теперь называется своим
+    # именем и до сравнения регистров дело не доходит.
+    # soc_pc отдаёт БАЙТОВЫЙ адрес, в отличие от самого железа, где счётчик
+    # считает слова (RISC5.v: nxpc = PC + 1). Обёртка переводит.
+    if qpc != rtl["pc"]:
+        print(f"  ❌ выравнивание: модель на {rtl['pc']:08X}, QEMU на {qpc:08X} — "
+              f"сравниваются разные команды")
+        return 1
 
     bad = 0
     for i in range(16):
@@ -120,7 +133,7 @@ def main():
     # Отрицательный контроль. Проверка, которая не умеет краснеть, ничего не
     # проверяет: гоняем ту же программу на машине БЕЗ расширения — там эта
     # кодировка означает другое, и состояния обязаны разойтись.
-    plain = in_qemu(binp, BUDGET, chk=False)
+    plain, _ = in_qemu(binp, BUDGET, chk=False)
     if plain == [rtl["regs"][i] for i in range(16)]:
         print("  ❌ без расширения состояние то же — значит сверка ничего не проверяет")
         return 1
