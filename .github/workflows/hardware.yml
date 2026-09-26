@@ -80,6 +80,4 @@ jobs:
       # Verilator здесь не нужен: модель, снятая с RTL, лежит в репозитории
       # собранной (risc5-chk.wasm) — её же отдаёт страница читателю.
       - name: Сверка расширения ISA
-        run: |
-          make -C impl tests/bench_bounds_e.bin
-          python3 qemu/test/compare_chk.py
+        run: python3 qemu/test/compare_chk.py

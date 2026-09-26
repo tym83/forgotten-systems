@@ -96,9 +96,11 @@ def in_qemu(binpath, budget, chk):
 
 
 def main():
-    binp = IMPL / "tests/bench_bounds_e.bin"
+    # Берём ту же копию, что уезжает на страницу: в tests/ файл порождаемый и
+    # в свежем дереве его нет.
+    binp = IMPL / "web/bench_bounds_e.bin"
     if not binp.exists():
-        raise SystemExit("  ❌ нет tests/bench_bounds_e.bin — соберите: make -C impl web")
+        raise SystemExit("  ❌ нет web/bench_bounds_e.bin — соберите: make -C impl web")
 
     rtl = in_rtl(binp, BUDGET)
     qemu = in_qemu(binp, BUDGET, chk=True)

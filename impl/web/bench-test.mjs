@@ -7,13 +7,16 @@
 import fs from 'node:fs';
 import { runBench, perCheck } from './bench.js';
 
-const P = JSON.parse(fs.readFileSync('../tests/bench_bounds.json', 'utf8'));
+// ⚠ Читаем то, что уезжает ЧИТАТЕЛЮ, а не порождаемое в tests/: там файлы
+// собираются на месте и в свежем дереве их нет вовсе. Проверка должна считать
+// ровно те же байты, что страница.
+const P = JSON.parse(fs.readFileSync('bench_bounds.json', 'utf8'));
 // ⚠ `fs.readFileSync` для мелких файлов отдаёт ВИД на общий пул node, а не
 // собственный буфер: `.buffer` там — весь пул, и второе чтение подряд даёт
 // чужие байты. Программа при этом собирается из мусора и просто не доходит до
 // конца — молча, без единой ошибки. Берём ровно своё окно.
 const load = n => {
-  const b = fs.readFileSync(`../tests/bench_bounds_${n}.bin`);
+  const b = fs.readFileSync(`bench_bounds_${n}.bin`);
   return new Uint32Array(b.buffer, b.byteOffset, b.length / 4);
 };
 
